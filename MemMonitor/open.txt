@@ -1,0 +1,7 @@
+GPJ
+Open
+{
+	pdbPath = "C:\Project\GitHub\BoostIPC\Debug\SharememLibrary.pdb" , 
+	sharedmemoryname = "MySharedMemory"
+	Property symbolName = "SCustomStruct#3", rect = 1, 2, 3, 4
+}

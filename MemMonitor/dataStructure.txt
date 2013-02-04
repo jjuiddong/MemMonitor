@@ -1,0 +1,14 @@
+GPJ
+
+Property
+{
+	char[64]	symbolName
+}
+
+Open
+{
+	char[128]	pdbPath
+	char[128]	sharedmemoryname
+	size
+	Property*	properties	
+}
