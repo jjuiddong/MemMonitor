@@ -61,3 +61,5 @@
 
 #include "../Common/Common.h"
 namespace dbg = common::dbg;
+
+#include "Global.h"

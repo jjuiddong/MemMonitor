@@ -188,11 +188,11 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\ClassView.cpp"
+				RelativePath=".\FileView.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\FileView.cpp"
+				RelativePath=".\Global.cpp"
 				>
 			</File>
 			<File
@@ -209,6 +209,10 @@
 			</File>
 			<File
 				RelativePath=".\MemMonitorView.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\MemoryView.cpp"
 				>
 			</File>
 			<File
@@ -250,11 +254,19 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\ClassView.h"
+				RelativePath=".\DataProperty.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\DataProperty.h"
 				>
 			</File>
 			<File
 				RelativePath=".\FileView.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Global.h"
 				>
 			</File>
 			<File
@@ -271,6 +283,10 @@
 			</File>
 			<File
 				RelativePath=".\MemMonitorView.h"
+				>
+			</File>
+			<File
+				RelativePath=".\MemoryView.h"
 				>
 			</File>
 			<File
@@ -457,6 +473,14 @@
 			</File>
 			<File
 				RelativePath=".\visualizer\VisualizerDefine.h"
+				>
+			</File>
+			<File
+				RelativePath=".\visualizer\VisualizerGlobal.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\visualizer\VisualizerGlobal.h"
 				>
 			</File>
 			<File

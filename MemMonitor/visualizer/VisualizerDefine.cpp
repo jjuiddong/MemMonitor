@@ -2,34 +2,37 @@
 #include "stdafx.h"
 #include "VisualizerDefine.h"
 
-using namespace visualizer_parser;
+using namespace visualizer;
+using namespace visualizer::parser;
 
 
 //------------------------------------------------------------------------
 // 
 //------------------------------------------------------------------------
-void visualizer_parser::PrintToken( Tokentype token, char *szTokenString )
+std::string parser::PrintToken( Tokentype token, char *szTokenString )
 {
+	std::stringstream ss;
 	switch( token )
 	{
 	case ID:
-	case STRING:	printf( "string = %s\n", szTokenString ); break;
-	case ASSIGN:	printf( "=" ); break;
-	case TIMES:		printf( "*" ); break;
-	case LPAREN:	printf( "(" ); break;
-	case RPAREN:	printf( ")" ); break;
-	case LBRACE:	printf( "{" ); break;
-	case RBRACE:	printf( "}" ); break;
-	case COMMA:		printf( "," ); break;
-	case NUM:		printf( "number" ); break;
-	case OR:		printf( "||" ); break;
-	case AND:		printf( "&&" ); break;
+	case STRING:	ss << "string = " << szTokenString; break;
+	case ASSIGN:	ss << "="; break;
+	case TIMES:		ss <<"*"; break;
+	case LPAREN:	ss << "("; break;
+	case RPAREN:	ss << ")"; break;
+	case LBRACE:	ss << "{"; break;
+	case RBRACE:	ss << "}"; break;
+	case COMMA:	ss << ","; break;
+	case NUM:		ss << "number"; break;
+	case OR:		ss << "||"; break;
+	case AND:		ss << "&&"; break;
 
-	default: 		printf( "UnKnown token %d, %s\n", token, szTokenString ); break;
+	default: 		ss << "UnKnown token " << token << szTokenString; break;
 	}
+	return ss.str();
 }
 
-SExpression* visualizer_parser::NewExpression( Kind kind )
+SExpression* parser::NewExpression( Kind kind )
 {
 	SExpression *p = new SExpression;
 	p->kind = kind;
@@ -37,7 +40,7 @@ SExpression* visualizer_parser::NewExpression( Kind kind )
 	return p;
 }
 
-SStatements* visualizer_parser::NewStatement( StatementKind kind )
+SStatements* parser::NewStatement( StatementKind kind )
 {
 	SStatements *p = new SStatements;
 	p->kind = kind;
@@ -81,7 +84,7 @@ void RemoveExpression( SExpression*p )
 	delete p;
 }
 
-void visualizer_parser::RemoveType_Stmt( SType_Stmt *p)
+void parser::RemoveType_Stmt( SType_Stmt *p)
 {
 	if (!p) return;
 	if (p->templateArgs)
@@ -98,7 +101,7 @@ void visualizer_parser::RemoveType_Stmt( SType_Stmt *p)
 	delete p;
 }
 
-void visualizer_parser::RemoveType_Stmts( SType_Stmts *p )
+void parser::RemoveType_Stmts( SType_Stmts *p )
 {
 	if (!p) return;
 	RemoveType_Stmt(p->type);
@@ -178,7 +181,7 @@ void RemoveAutoExp( SAutoExp *autoexp )
 	delete autoexp;
 }
 
-void visualizer_parser::RemoveVisualizerScript(SVisualizerScript*p)
+void parser::RemoveVisualizerScript(SVisualizerScript*p)
 {
 	if (!p) return;
 	if (p->kind == VisualizerScript_Visualizer)

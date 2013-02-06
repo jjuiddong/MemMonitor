@@ -9,7 +9,7 @@
 
 #include "VisualizerScanner.h"
 
-namespace visualizer_parser
+namespace visualizer { namespace parser 
 {
 	class CScanner;
 	class CParser
@@ -74,4 +74,4 @@ namespace visualizer_parser
 		bool IsPrefixOp(Tokentype tok);
 
 	};
-}
+}}

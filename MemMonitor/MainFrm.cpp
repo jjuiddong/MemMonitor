@@ -132,10 +132,10 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	}
 
 //	m_wndFileView.EnableDocking(CBRS_ALIGN_ANY);
-	m_wndClassView.EnableDocking(CBRS_ALIGN_ANY);
+	m_wndMemoryView.EnableDocking(CBRS_ALIGN_ANY);
 //	DockPane(&m_wndFileView);
 	CDockablePane* pTabbedBar = NULL;
-	DockPane(&m_wndClassView);
+	DockPane(&m_wndMemoryView);
 //	m_wndClassView.AttachToTabWnd(&m_wndFileView, DM_SHOW, TRUE, &pTabbedBar);
 	m_wndOutput.EnableDocking(CBRS_ALIGN_ANY);
 	DockPane(&m_wndOutput);
@@ -224,17 +224,13 @@ bool	CMainFrame::OpenScript( const std::string &openScriptFileName )
 			AddPropertyWnd( symbolName );
 		}
 	}
-	catch (std::exception &)
+	catch (std::exception &e)
 	{
-// 		::AfxMessageBox( 
-// 			common::formatw( "%s json script를 읽는데 실패했습니다.",
-// 					openScriptFileName.c_str()).c_str() );
-		m_wndOutput.AddString( 
-			common::formatw( "%s json script를 읽는데 실패했습니다.",
-					openScriptFileName.c_str()).c_str() );
+		m_wndOutput.AddString( common::formatw( "(%s) %s",
+			openScriptFileName.c_str(), e.what()).c_str() );
 	}
 
-	m_wndClassView.UpdateMemoryView();
+	m_wndMemoryView.UpdateMemoryView();
 	return true;
 }
 
@@ -257,7 +253,7 @@ BOOL CMainFrame::CreateDockingWindows()
 // 	CString strClassView;
 // 	bNameValid = strClassView.LoadString(IDS_CLASS_VIEW);
 //	ASSERT(bNameValid);
-	if (!m_wndClassView.Create(L"Memory View", this, CRect(0, 0, 200, 200), TRUE, ID_VIEW_CLASSVIEW, 
+	if (!m_wndMemoryView.Create(L"Memory View", this, CRect(0, 0, 200, 200), TRUE, ID_VIEW_CLASSVIEW, 
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | CBRS_LEFT | CBRS_FLOAT_MULTI))
 	{
 		TRACE0("클래스 뷰 창을 만들지 못했습니다.\n");
@@ -304,7 +300,7 @@ void CMainFrame::SetDockingWindowIcons(BOOL bHiColorIcons)
 // 	m_wndFileView.SetIcon(hFileViewIcon, FALSE);
 
 	HICON hClassViewIcon = (HICON) ::LoadImage(::AfxGetResourceHandle(), MAKEINTRESOURCE(bHiColorIcons ? IDI_CLASS_VIEW_HC : IDI_CLASS_VIEW), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), 0);
-	m_wndClassView.SetIcon(hClassViewIcon, FALSE);
+	m_wndMemoryView.SetIcon(hClassViewIcon, FALSE);
 
 	HICON hOutputBarIcon = (HICON) ::LoadImage(::AfxGetResourceHandle(), MAKEINTRESOURCE(bHiColorIcons ? IDI_OUTPUT_WND_HC : IDI_OUTPUT_WND), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), 0);
 	m_wndOutput.SetIcon(hOutputBarIcon, FALSE);
@@ -494,7 +490,7 @@ bool CMainFrame::AddPropertyWnd( const CString &symbolTypeName, CRect rect ) // 
 
 void CMainFrame::OnMemorytreeWindow()
 {
-	m_wndClassView.ShowPane(TRUE, TRUE,TRUE);
+	m_wndMemoryView.ShowPane(TRUE, TRUE,TRUE);
 }
 
 void CMainFrame::OnOutputWindow()
@@ -507,10 +503,20 @@ void CMainFrame::OnPropertyWindow()
 	m_wndProperties.ShowPane(TRUE, TRUE,TRUE);
 }
 
-
 void CMainFrame::OnClose()
 {
-	// TODO: 여기에 메시지 처리기 코드를 추가 및/또는 기본값을 호출합니다.
-
 	CFrameWndEx::OnClose();
+}
+
+
+//------------------------------------------------------------------------
+// PropertyWindow 의 ComboBox를 업데이트 한다.
+//------------------------------------------------------------------------
+void	CMainFrame::RefreshPropertyWndComboBox()
+{
+	m_wndProperties.UpdateComboBox();
+	BOOST_FOREACH(CPropertiesWnd *wnd, m_PropertyList)
+	{
+		wnd->UpdateComboBox();
+	}
 }

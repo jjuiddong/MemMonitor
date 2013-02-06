@@ -2,7 +2,8 @@
 #include "stdafx.h"
 #include "VisualizerScanner.h"
 
-using namespace visualizer_parser;
+using namespace visualizer;
+using namespace visualizer::parser;
 
 // lookup table of reserved words
 typedef struct _SReservedWord

@@ -4,7 +4,7 @@
 
 #pragma once
 #include "FileView.h"
-#include "ClassView.h"
+#include "MemoryView.h"
 #include "OutputWnd.h"
 #include "PropertiesWnd.h"
 
@@ -38,9 +38,9 @@ protected:  // 컨트롤 모음이 포함된 멤버입니다.
 	CMFCMenuBar				m_wndMenuBar;
 //	CMFCToolBar				m_wndToolBar;
 //	CMFCStatusBar			m_wndStatusBar;
-	CMFCToolBarImages	m_UserImages;
 //	CFileView						m_wndFileView;
-	CClassView					m_wndClassView;
+	CMFCToolBarImages	m_UserImages;
+	CMemoryView				m_wndMemoryView;
 	COutputWnd				m_wndOutput;
 	CPropertiesWnd			m_wndProperties;		// main properties
 
@@ -54,8 +54,10 @@ public:
 	bool							AddPropertyWnd( const CString &symbolTypeName,
 																CRect rect=CRect(0, 0, 200, 200));
 
+	void							RefreshPropertyWndComboBox();
+
 	CPropertiesWnd&		GetPropertyWnd() { return m_wndProperties; }
-	CClassView&			GetClassView() { return m_wndClassView; }
+	CMemoryView&		GetMemoryView() { return m_wndMemoryView; }
 	COutputWnd&			GetOutputWnd() { return m_wndOutput; }	
 
 // 생성된 메시지 맵 함수

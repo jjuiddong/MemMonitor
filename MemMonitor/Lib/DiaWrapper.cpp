@@ -547,25 +547,34 @@ LONG dia::GetSymbolLocation(IDiaSymbol *pSymbol, OUT LocationType *pLocType) // 
 
 
 //------------------------------------------------------------------------
-// pSymbol 타입의 정보를 pMemPtr 주소에서 가져온다.
-// pSymbol 은 SymTagData 타입이어야 한다.
+// pSymbol 타입의 정보를 srcPtr 주소에서 가져온다.
+// pSymbol 은 srcPtr 에 저장된 심볼의 타입을 가르킨다.
+// pSymbol 은 SymTagData 이거나 SymTagBaseType 타입이어야 한다.
 // isApplyOffset : false 이면 변수의 offset을 적용하지 않는다.
 //                         이미 계산된 상태라면 할필요 없음
-// srcPtr : 데이타가 저장된 주소인데, pSymbol 의 offset 이
-//    적용되기 때문에 이 srcPtr주소는 pSymbol을 소유하고 
-//    있는 구조체나, 클래스의 주소를 가르키고 있어야 한다.
 //------------------------------------------------------------------------
-_variant_t dia::GetValueFromSymbol(void *srcPtr, IDiaSymbol *pSymbol, bool isApplyOffset) // isApplyOffset=true
+_variant_t dia::GetValueFromSymbol(void *srcPtr, IDiaSymbol *pSymbol )
 {
 	_variant_t value;
+	void *ptr = (BYTE*)srcPtr;
 
-	LONG offset = dia::GetSymbolLocation(pSymbol);
-	if (!isApplyOffset) offset = 0;
-	void *ptr = (BYTE*)srcPtr + offset;
-
-	CComPtr<IDiaSymbol> pBaseType;
-	HRESULT hr = pSymbol->get_type(&pBaseType);
+	enum SymTagEnum symTag;
+	HRESULT hr = pSymbol->get_symTag((DWORD*)&symTag);
 	ASSERT_RETV((S_OK == hr), value);
+
+	bool isReleaseBaseType=false;
+	IDiaSymbol *pBaseType;
+	if (SymTagData == symTag)
+	{
+		hr = pSymbol->get_type(&pBaseType);
+		ASSERT_RETV((S_OK == hr), value);
+		pSymbol = pBaseType;
+		isReleaseBaseType = true;
+	}
+	else
+	{
+		pBaseType = pSymbol;
+	}
 
 	enum SymTagEnum baseSymTag;
 	hr = pBaseType->get_symTag((DWORD*)&baseSymTag);
@@ -584,6 +593,8 @@ _variant_t dia::GetValueFromSymbol(void *srcPtr, IDiaSymbol *pSymbol, bool isApp
 		break;
 
 	default:
+		if (isReleaseBaseType)
+			pBaseType->Release();
 		return value;
 	}
 
@@ -592,6 +603,9 @@ _variant_t dia::GetValueFromSymbol(void *srcPtr, IDiaSymbol *pSymbol, bool isApp
 	ASSERT_RETV((S_OK == hr), value );
 
 	value = dia::GetValueFromAddress(ptr, btype, length);
+
+	if (isReleaseBaseType)
+		pBaseType->Release();
 	return value;
 }
 

@@ -5,31 +5,20 @@
 #include "Variant.h"
 #include "../Lib/DiaWrapper.h"
 #include "DefaultPropertyMaker.h"
-#include "../MainFrm.h"
-#include "../OutputWnd.h"
+#include "VisualizerGlobal.h"
 
 namespace visualizer
 {
-	using namespace visualizer_parser;
+	using namespace parser;
 	using namespace sharedmemory;
 
-	struct SSymbolInfo
-	{
-		IDiaSymbol *pSym;
-		SMemoryInfo mem;	
-		bool isNotRelease; // defalut : false
-		SSymbolInfo() { pSym = NULL; isNotRelease = false;}
-		SSymbolInfo( IDiaSymbol *psym, const SMemoryInfo &_mem) : pSym(psym), mem(_mem), isNotRelease(false) { }
-		~SSymbolInfo() { if (pSym && !isNotRelease)pSym->Release(); }
-	};
-
-	visualizer_parser::SVisualizerScript* FindVisualizer( const std::string &typeName );
+	SVisualizerScript* FindVisualizer( const std::string &typeName );
 
 	// search visualizer
-	visualizer_parser::SVisualizerScript* SearchVisualizerScript(SType_Stmt *psymT);
+	SVisualizerScript* SearchVisualizerScript(SType_Stmt *psymT);
 	bool CompareTypes( SType_Stmt *psymT, SType_Stmts *pvisT);
 	bool CompareType( SType_Stmt *psymT, SType_Stmt *pvisT,OUT bool &isAstrisk );
-	bool CompareTemplateTypes( visualizer_parser::SType_TemplateArgs *psymT, 
+	bool CompareTemplateTypes( SType_TemplateArgs *psymT, 
 		SType_TemplateArgs *pvisT );
 	SType_Stmt* ParseType( INOUT std::string &typeName );
 	SType_TemplateArgs* ParseTemplateType( INOUT std::string &typeName );
@@ -41,6 +30,8 @@ namespace visualizer
 	void MakeProperty_AutoExpand( SAutoExp *pautoexp, const SSymbolInfo &symbol );
 
 	void MakePropertyStatements( SStatements *pstmt, const SSymbolInfo &symbol );
+
+	void MakePropertySimpleExpression( SSimpleExp *pexp, const SSymbolInfo &symbol );
 
 	void MakePropertyExpression( SExpression *pexp, const SSymbolInfo &symbol );
 
@@ -64,9 +55,6 @@ namespace visualizer
 	bool Find_Variable_FromId( const std::string &varId, 
 		IN const SSymbolInfo &symbol, OUT SSymbolInfo *pOut );
 
-	bool Find_ChildSymbol(  const std::string findSymbolName, 
-		IN const SSymbolInfo &symbol, OUT SSymbolInfo *pOut);
-
 	void Disp_Expression( SExpression *pexp );
 	char GetAsciiFromTokentype(Tokentype tok);
 	void CheckError( bool condition, const std::string &msg="error" );
@@ -77,10 +65,10 @@ using namespace dia;
 using namespace std;
 using namespace visualizer;
 
-visualizer_parser::SVisualizerScript *m_pVisScr = NULL;
+visualizer::parser::SVisualizerScript *m_pVisScr = NULL;
 std::string m_SymbolName;
 sharedmemory::SMemoryInfo m_MemInfo;
-CPropertiesWnd *m_pPropertiesWnd= NULL;
+CDataProperty *m_pPropertiesCtrl= NULL;
 CMFCPropertyGridProperty *m_pParentProperty = NULL;
 
 
@@ -97,7 +85,8 @@ public:
 //------------------------------------------------------------------------
 bool visualizer::OpenVisualizerScript( const std::string &fileName )
 {
-	visualizer_parser::CParser parser;
+	RemoveVisualizerScript(m_pVisScr);
+	CParser parser;
 	m_pVisScr = parser.Parse(fileName);
 	if (!m_pVisScr)
 		return false;
@@ -106,7 +95,7 @@ bool visualizer::OpenVisualizerScript( const std::string &fileName )
 
 void visualizer::Release()
 {
-	visualizer_parser::RemoveVisualizerScript(m_pVisScr);
+	RemoveVisualizerScript(m_pVisScr);
 
 }
 
@@ -115,14 +104,14 @@ void visualizer::Release()
 // Property 생성
 // symbolName : 공유메모리에 저장된 심볼이름
 //------------------------------------------------------------------------
-bool	visualizer::MakeVisualizerProperty( CPropertiesWnd *pPropertiesWnd, 
+bool	visualizer::MakeVisualizerProperty( CDataProperty *pPropertiesWnd, 
 											   CMFCPropertyGridProperty *pParentProp, 
 											   const SMemoryInfo &memInfo, const string &symbolName )
 {
 	const std::string str = sharedmemory::ParseObjectName(symbolName);
 	m_SymbolName = str;
 	m_MemInfo = memInfo;
-	m_pPropertiesWnd = pPropertiesWnd;
+	m_pPropertiesCtrl = pPropertiesWnd;
 	m_pParentProperty = pParentProp;
 
 	SVisualizerScript *pVisScript = FindVisualizer(str);
@@ -143,8 +132,7 @@ bool	visualizer::MakeVisualizerProperty( CPropertiesWnd *pPropertiesWnd,
 		}
 		catch (VisualizerScriptError &e)
 		{
-			((CMainFrame*)::AfxGetMainWnd())->GetOutputWnd().AddString( 
-				common::string2wstring(e.m_Msg).c_str() );
+			global::PrintOutputWnd( e.m_Msg );
 		}
 		return true;
 	}
@@ -190,12 +178,30 @@ void visualizer::MakePropertyStatements( SStatements *pstmt, const SSymbolInfo &
 		switch (node->kind)
 		{
 		case Stmt_Expression: MakePropertyExpression(node->exp, symbol); break;
-		case Stmt_SimpleExpression: break;
+		case Stmt_SimpleExpression: MakePropertySimpleExpression(node->simple_exp, symbol); break;
 		case Stmt_If: MakePropertyIfStmt(node->if_stmt, symbol); break;
 		case Stmt_Bracket_Iterator: MakePropertyIteratorStmt(node->itor_stmt, symbol); break;
 		}	
 		node = node->next;
 	}
+}
+
+
+//------------------------------------------------------------------------
+// Simple_Expression 처리
+//------------------------------------------------------------------------
+void visualizer::MakePropertySimpleExpression( SSimpleExp *pexp, const SSymbolInfo &symbol )
+{
+	RET(!pexp);	
+	RET(!pexp->text);
+	RET(!pexp->expr);
+
+	SSymbolInfo findVar;
+	const bool result = Find_Variable(pexp->expr, symbol, &findVar);
+	CheckError(result, "Simple Expression Error!!, not found variable" );
+
+	findVar.mem.name = pexp->text->str;
+	MakeProperty_DefaultForm(m_pPropertiesCtrl, m_pParentProperty, findVar);	
 }
 
 
@@ -312,29 +318,15 @@ void visualizer::MakePropertyExpression( SExpression *pexp, const SSymbolInfo &s
 		break;
 
 	case DispFormatK:
-			MakePropertyExpression(pexp->rhs, symbol);
+		MakePropertyExpression(pexp->rhs, symbol);
 		break;
 
 	case VariableK:
 		{
-// 			LONG offset = 0;
-// 			IDiaSymbol *pVarSymbol = Find_Variable(pexp, pSymbol, offset);
-// 			if (pVarSymbol)
-// 			{
-// 				const string name = dia::GetSymbolName(pVarSymbol);
-// 				ULONGLONG length = 0;
-// 				HRESULT hr = pVarSymbol->get_length(&length);
-// 				LONG symbolOffset=0;
-// 				hr = pVarSymbol->get_offset(&symbolOffset);
-// 				offset -= symbolOffset; // MakeProperty_DefaultForm 은 마지막에 symbol 의 offset이
-// 													  // 적용되기 때문에, 함수를 호출하기 전에 미리 symbol offset
-// 													  // 값을 빼야 한다.
-// 				BYTE *ptr = (BYTE*)memInfo.ptr + offset;
-// 
-//  				visualizer::MakeProperty_DefaultForm( m_pPropertiesWnd, m_pParentProperty, 
-//  					pVarSymbol, SMemoryInfo(name.c_str(), ptr, (size_t)length) );
-// 				pVarSymbol->Release();
-//			}
+			SSymbolInfo findSymbol;
+			const bool result = Find_Variable(pexp, symbol, &findSymbol);
+			CheckError(result, " variable expression error!!, undetected" );
+			visualizer::MakeProperty_DefaultForm( m_pPropertiesCtrl, m_pParentProperty, findSymbol);	
 		}
 		break;
 
@@ -627,7 +619,7 @@ CComVariant visualizer::Eval_Variable( SExpression *pexp, const SSymbolInfo &sym
 	}
 
 	if (reval.vt == VT_EMPTY)
-		reval = dia::GetValueFromSymbol( findSymbol.mem.ptr, findSymbol.pSym, false);
+		reval = dia::GetValueFromSymbol( findSymbol.mem.ptr, findSymbol.pSym);
 		
 	// 나중에 처리
 	switch (pexp->prefix_op)
@@ -670,6 +662,7 @@ bool visualizer::Find_Variable( SExpression *pexp,
 				pOut->isNotRelease = true; // symbol의 복사본이므로 release해선 안됨
 				pOut->pSym = symbol.pSym;
 				pOut->mem = SMemoryInfo( m_SymbolName.c_str(), m_MemInfo.ptr, 0 );
+				reval = true;
 			}
 		}
 	}
@@ -754,7 +747,11 @@ bool visualizer::Find_ChildSymbol(  const std::string findSymbolName,
 			if (pOut)
 			{
 				pOut->pSym = pFindSymbol;
-				pOut->mem = SMemoryInfo(symbol.mem.name.c_str(), (BYTE*)symbol.mem.ptr + offset, 0);
+
+				// memInfo
+				pOut->mem.name = dia::GetSymbolName(pFindSymbol);
+				pOut->mem.ptr = (BYTE*)symbol.mem.ptr + offset;
+				pOut->mem.size = 0;
 			}
 		}
 		return true;

@@ -39,7 +39,17 @@ namespace sharedmemory
 		void *ptr;
 		size_t size;
 		SMemoryInfo() {}
+		SMemoryInfo(const SMemoryInfo &rhs) { operator=(rhs); }
 		SMemoryInfo(const char *n, void *p, size_t s):name(n), ptr(p), size(s) {}
+		SMemoryInfo& operator=(const SMemoryInfo &rhs) {
+			if (this != &rhs)
+			{
+				name = rhs.name;
+				ptr = rhs.ptr;
+				size = rhs.size;
+			}
+			return *this;
+		}
 	};
 	typedef std::list<SMemoryInfo> MemoryList;
 

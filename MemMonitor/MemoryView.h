@@ -13,16 +13,19 @@ class CClassToolBar : public CMFCToolBar
 	virtual BOOL AllowShowOnList() const { return FALSE; }
 };
 
-class CClassView : public CDockablePane
+class CMemoryView : public CDockablePane
 {
 public:
-	CClassView();
-	virtual ~CClassView();
-
-	void AdjustLayout();
-	void OnChangeVisualStyle();
+	CMemoryView();
+	virtual ~CMemoryView();
 
 protected:
+	enum 
+	{
+		REFRESH_TIME = 60000, // 1분에 한번씩 업데이트
+		ID_TIMER,
+	};
+
 	CClassToolBar m_wndToolBar;
 	CViewTree m_wndClassView;
 	CImageList m_ClassViewImages;
@@ -30,9 +33,12 @@ protected:
 
 public:
 	void UpdateMemoryView();
+	void AdjustLayout();
+	void OnChangeVisualStyle();
 
 protected:
 	HTREEITEM GetSymbolTreeItem(HTREEITEM hItem);
+	void				Refresh();
 
 protected:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
@@ -43,6 +49,7 @@ protected:
 	afx_msg LRESULT OnChangeActiveTab(WPARAM, LPARAM);
 	afx_msg void OnMemoryOpenWindow();
 	afx_msg void OnButtonRefresh();
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	DECLARE_MESSAGE_MAP()
 
 	// 	afx_msg void OnClassAddMemberFunction();
@@ -53,5 +60,7 @@ protected:
 	//	afx_msg void OnSort(UINT id);
 	//	afx_msg void OnUpdateSort(CCmdUI* pCmdUI);
 
+public:
+	afx_msg void OnDestroy();
 };
 

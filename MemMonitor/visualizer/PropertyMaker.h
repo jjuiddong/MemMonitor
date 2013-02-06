@@ -9,9 +9,10 @@
 #define __VISUALIZERPROPERTYMAKER_H__
 
 #include "VisualizerDefine.h"
+#include "VisualizerGlobal.h"
 
 struct IDiaSymbol;
-class CPropertiesWnd;
+class CDataProperty;
 namespace visualizer
 {
 	 // init
@@ -19,9 +20,13 @@ namespace visualizer
 	void Release();
 
 	// make property
-	bool	MakeVisualizerProperty( CPropertiesWnd *pPropertiesWnd, 
+	bool	MakeVisualizerProperty( CDataProperty *pPropertiesWnd, 
 		CMFCPropertyGridProperty *pParentProp, 
 		const sharedmemory::SMemoryInfo &memInfo, const std::string &symbolName );
+
+	// find
+	bool Find_ChildSymbol(  const std::string findSymbolName, 
+		IN const SSymbolInfo &symbol, OUT SSymbolInfo *pOut);
 
 }
 

@@ -1,15 +1,14 @@
 
 #include "stdafx.h"
-#include "MainFrm.h"
-#include "ClassView.h"
-#include "Resource.h"
 #include "MemMonitor.h"
-#include "OutputWnd.h"
+#include "MemoryView.h"
+#include "MainFrm.h"
+#include "visualizer/PropertyMaker.h"
 
 
 class CClassViewMenuButton : public CMFCToolBarMenuButton
 {
-	friend class CClassView;
+	friend class CMemoryView;
 
 	DECLARE_SERIAL(CClassViewMenuButton)
 
@@ -38,16 +37,16 @@ IMPLEMENT_SERIAL(CClassViewMenuButton, CMFCToolBarMenuButton, 1)
 // 생성/소멸
 //////////////////////////////////////////////////////////////////////
 
-CClassView::CClassView()
+CMemoryView::CMemoryView()
 {
 	m_nCurrSort = ID_SORTING_GROUPBYTYPE;
 }
 
-CClassView::~CClassView()
+CMemoryView::~CMemoryView()
 {
 }
 
-BEGIN_MESSAGE_MAP(CClassView, CDockablePane)
+BEGIN_MESSAGE_MAP(CMemoryView, CDockablePane)
 	ON_WM_CREATE()
 	ON_WM_SIZE()
 	ON_WM_CONTEXTMENU()
@@ -60,14 +59,16 @@ BEGIN_MESSAGE_MAP(CClassView, CDockablePane)
 	ON_WM_SETFOCUS()
 //	ON_COMMAND_RANGE(ID_SORTING_GROUPBYTYPE, ID_SORTING_SORTBYACCESS, OnSort)
 //	ON_UPDATE_COMMAND_UI_RANGE(ID_SORTING_GROUPBYTYPE, ID_SORTING_SORTBYACCESS, OnUpdateSort)
-	ON_COMMAND(ID_MEMORY_OPENWINDOW, &CClassView::OnMemoryOpenWindow)
-	ON_COMMAND(ID_BUTTON_REFRESH, &CClassView::OnButtonRefresh )
+	ON_COMMAND(ID_MEMORY_OPENWINDOW, &CMemoryView::OnMemoryOpenWindow)
+	ON_COMMAND(ID_BUTTON_REFRESH, &CMemoryView::OnButtonRefresh )
+	ON_WM_TIMER()
+	ON_WM_DESTROY()
 END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
 // CClassView 메시지 처리기
 
-int CClassView::OnCreate(LPCREATESTRUCT lpCreateStruct)
+int CMemoryView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
 	if (CDockablePane::OnCreate(lpCreateStruct) == -1)
 		return -1;
@@ -76,7 +77,8 @@ int CClassView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	rectDummy.SetRectEmpty();
 
 	// 뷰를 만듭니다.
-	const DWORD dwViewStyle = WS_CHILD | WS_VISIBLE | TVS_HASLINES | TVS_LINESATROOT 
+	const DWORD dwViewStyle = WS_CHILD | WS_VISIBLE | TVS_HASLINES | TVS_LINESATROOT | TVS_FULLROWSELECT
+		| TVS_SHOWSELALWAYS  
 		| TVS_HASBUTTONS | WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 
 	if (!m_wndClassView.Create(dwViewStyle, rectDummy, this, 2))
@@ -116,10 +118,13 @@ int CClassView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	// 정적 트리 뷰 데이터를 더미 코드로 채웁니다.
 	//void InitMemoryView();();
 
+	// 타이머 설정
+	SetTimer(ID_TIMER, REFRESH_TIME, NULL);
+
 	return 0;
 }
 
-void CClassView::OnSize(UINT nType, int cx, int cy)
+void CMemoryView::OnSize(UINT nType, int cx, int cy)
 {
 	CDockablePane::OnSize(nType, cx, cy);
 	AdjustLayout();
@@ -127,34 +132,9 @@ void CClassView::OnSize(UINT nType, int cx, int cy)
 
 
 //------------------------------------------------------------------------
-// 공유메모리 정보를 트리로 출력한다.
-//------------------------------------------------------------------------
-void CClassView::UpdateMemoryView()
-{
-	if (!m_hWnd) return;
-
-	CMainFrame *pFrm = (CMainFrame*)::AfxGetMainWnd();
-	pFrm->GetOutputWnd().AddString( L"UpdateMemoryView" );
-
-	m_wndClassView.DeleteAllItems();
-
-	sharedmemory::MemoryList memList;
-	sharedmemory::EnumerateMemoryInfo(memList);
-	BOOST_FOREACH(sharedmemory::SMemoryInfo &info, memList)
-	{
-		const std::wstring wstr = common::string2wstring( info.name );
-		const HTREEITEM hItem = m_wndClassView.InsertItem( wstr.c_str(), 0, 0);
-
-		m_wndClassView.InsertItem(common::formatw("size: %d", info.size).c_str(), hItem);
-		m_wndClassView.InsertItem(common::formatw("ptr: 0x%x", (DWORD)info.ptr).c_str(),hItem);
-	}
-}
-
-
-//------------------------------------------------------------------------
 // 
 //------------------------------------------------------------------------
-void CClassView::OnContextMenu(CWnd* pWnd, CPoint point)
+void CMemoryView::OnContextMenu(CWnd* pWnd, CPoint point)
 {
 	CTreeCtrl* pWndTree = (CTreeCtrl*)&m_wndClassView;
 	ASSERT_VALID(pWndTree);
@@ -186,7 +166,7 @@ void CClassView::OnContextMenu(CWnd* pWnd, CPoint point)
 	theApp.GetContextMenuManager()->ShowPopupMenu((HMENU)pSumMenu->m_hMenu, point.x, point.y, this, TRUE);
 }
 
-void CClassView::AdjustLayout()
+void CMemoryView::AdjustLayout()
 {
 	if (GetSafeHwnd() == NULL)
 	{
@@ -202,56 +182,7 @@ void CClassView::AdjustLayout()
  	m_wndClassView.SetWindowPos(NULL, rectClient.left + 1, rectClient.top + cyTlb + 1, rectClient.Width() - 2, rectClient.Height() - cyTlb - 2, SWP_NOACTIVATE | SWP_NOZORDER);
 }
 
-// void CClassView::OnSort(UINT id)
-// {
-// 	if (m_nCurrSort == id)
-// 	{
-// 		return;
-// 	}
-// 
-// 	m_nCurrSort = id;
-// 
-// 	CClassViewMenuButton* pButton =  DYNAMIC_DOWNCAST(CClassViewMenuButton, m_wndToolBar.GetButton(0));
-// 
-// 	if (pButton != NULL)
-// 	{
-// 		pButton->SetImage(GetCmdMgr()->GetCmdImage(id));
-// 		m_wndToolBar.Invalidate();
-// 		m_wndToolBar.UpdateWindow();
-// 	}
-//}
-
-// void CClassView::OnUpdateSort(CCmdUI* pCmdUI)
-// {
-// 	pCmdUI->SetCheck(pCmdUI->m_nID == m_nCurrSort);
-// }
-
-// void CClassView::OnClassAddMemberFunction()
-// {
-// 	AfxMessageBox(_T("멤버 함수 추가..."));
-// }
-// 
-// void CClassView::OnClassAddMemberVariable()
-// {
-// 	// TODO: 여기에 명령 처리기 코드를 추가합니다.
-// }
-// 
-// void CClassView::OnClassDefinition()
-// {
-// 	// TODO: 여기에 명령 처리기 코드를 추가합니다.
-// }
-// 
-// void CClassView::OnClassProperties()
-// {
-// 	// TODO: 여기에 명령 처리기 코드를 추가합니다.
-// }
-
-// void CClassView::OnNewFolder()
-// {
-// 	AfxMessageBox(_T("새 폴더..."));
-// }
-
-void CClassView::OnPaint()
+void CMemoryView::OnPaint()
 {
 	CPaintDC dc(this); // 그리기를 위한 디바이스 컨텍스트입니다.
 
@@ -263,14 +194,14 @@ void CClassView::OnPaint()
 	dc.Draw3dRect(rectTree, ::GetSysColor(COLOR_3DSHADOW), ::GetSysColor(COLOR_3DSHADOW));
 }
 
-void CClassView::OnSetFocus(CWnd* pOldWnd)
+void CMemoryView::OnSetFocus(CWnd* pOldWnd)
 {
 	CDockablePane::OnSetFocus(pOldWnd);
 
 	m_wndClassView.SetFocus();
 }
 
-void CClassView::OnChangeVisualStyle()
+void CMemoryView::OnChangeVisualStyle()
 {
 	m_ClassViewImages.DeleteImageList();
 
@@ -304,7 +235,7 @@ void CClassView::OnChangeVisualStyle()
 //------------------------------------------------------------------------
 // Clicked Open Window Menu
 //------------------------------------------------------------------------
-void CClassView::OnMemoryOpenWindow()
+void CMemoryView::OnMemoryOpenWindow()
 {
 	HTREEITEM hItem = m_wndClassView.GetSelectSymbolTreeItem();
 	CString itemName = m_wndClassView.GetItemText(hItem);
@@ -314,14 +245,55 @@ void CClassView::OnMemoryOpenWindow()
 
 
 //------------------------------------------------------------------------
+// 
+//------------------------------------------------------------------------
+void CMemoryView::UpdateMemoryView()
+{
+	global::PrintOutputWnd( "Update MemoryView" );
+	m_wndClassView.UpdateMemoryTree();
+}
+
+
+//------------------------------------------------------------------------
 // Clicked Refresh Button
 //------------------------------------------------------------------------
-void CClassView::OnButtonRefresh()
+void CMemoryView::OnButtonRefresh()
+{
+	global::PrintOutputWnd( "MemoryView Refresh" );
+	Refresh();
+	
+	// visualizer reload
+	visualizer::OpenVisualizerScript( "autoexp.txt" );
+}
+
+
+//------------------------------------------------------------------------
+//  Refresh
+//------------------------------------------------------------------------
+void	CMemoryView::Refresh()
 {
 	UpdateMemoryView();
-
-	// Output창에 출력
 	CMainFrame *pFrm = (CMainFrame*)::AfxGetMainWnd();
-	pFrm->GetOutputWnd().AddString( L"MemoryView Refresh" );
-	//	
+	pFrm->RefreshPropertyWndComboBox();
+}
+
+//------------------------------------------------------------------------
+// 일정시간마다 정보를 업데이트 한다.
+//------------------------------------------------------------------------
+void CMemoryView::OnTimer(UINT_PTR nIDEvent)
+{
+	if (ID_TIMER == nIDEvent)
+	{
+		Refresh();
+	}
+}
+
+
+//------------------------------------------------------------------------
+// 
+//------------------------------------------------------------------------
+void CMemoryView::OnDestroy()
+{
+	CDockablePane::OnDestroy();
+	KillTimer(ID_TIMER);
 }

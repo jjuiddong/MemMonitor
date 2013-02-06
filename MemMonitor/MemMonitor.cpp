@@ -20,7 +20,7 @@
 #define new DEBUG_NEW
 #endif
 
-const std::string g_configFileName("config.json");
+std::string g_configFileName("config.json");
 
 // CMemMonitorApp
 
@@ -97,11 +97,14 @@ BOOL CMemMonitorApp::InitInstance()
 // 	ttParams.m_bVislManagerTheme = TRUE;
 // 	theApp.GetTooltipManager()->SetTooltipParams(AFX_TOOLTIP_TYPE_ALL,
 // 		RUNTIME_CLASS(CMFCToolTipCtrl), &ttParams);
+	// 표준 셸 명령, DDE, 파일 열기에 대한 명령줄을 구문 분석합니다.
+	CCommandLineInfo cmdInfo;
+	ParseCommandLine(cmdInfo);
+	if (!cmdInfo.m_strFileName.IsEmpty())
+		g_configFileName = common::wstring2string((LPCTSTR)cmdInfo.m_strFileName);
 
 	if (!OpenConfigScript(g_configFileName))
 		return FALSE;
-
-	visualizer::OpenVisualizerScript( "autoexp.txt" );
 
 	// 응용 프로그램의 문서 템플릿을 등록합니다. 문서 템플릿은
 	//  문서, 프레임 창 및 뷰 사이의 연결 역할을 합니다.
@@ -115,11 +118,6 @@ BOOL CMemMonitorApp::InitInstance()
 		return FALSE;
 	AddDocTemplate(pDocTemplate);
 
-
-	// 표준 셸 명령, DDE, 파일 열기에 대한 명령줄을 구문 분석합니다.
-	CCommandLineInfo cmdInfo;
-	ParseCommandLine(cmdInfo);
-
 	// 명령줄에 지정된 명령을 디스패치합니다.
 	// 응용 프로그램이 /RegServer, /Register, /Unregserver 또는 /Unregister로 시작된 경우 FALSE를 반환합니다.
 	if (!ProcessShellCommand(cmdInfo))
@@ -131,6 +129,7 @@ BOOL CMemMonitorApp::InitInstance()
 	// 접미사가 있을 경우에만 DragAcceptFiles를 호출합니다.
 	//  SDI 응용 프로그램에서는 ProcessShellCommand 후에 이러한 호출이 발생해야 합니다.
 
+	visualizer::OpenVisualizerScript( "autoexp.txt" );
 	((CMainFrame*)AfxGetMainWnd())->OpenScript(  g_configFileName );
 
 	return TRUE;

@@ -15,9 +15,7 @@
 #include <deque>
 #include "VisualizerDefine.h"
 
-
-namespace visualizer_parser
-{
+namespace visualizer { namespace parser {
 	class CScanner
 	{
 	public:
@@ -69,4 +67,4 @@ namespace visualizer_parser
 		BOOL GetString(char *receiveBuffer, int maxBufferLength);
 
 	};
-}
+}}

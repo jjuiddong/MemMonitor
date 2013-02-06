@@ -1,8 +1,11 @@
 
 #include "stdafx.h"
 #include "VisualizerParser.h"
+#include "../MainFrm.h"
+#include "../OutputWnd.h"
 
-using namespace visualizer_parser;
+using namespace visualizer;
+using namespace parser;
 using namespace std;
 
 #ifdef _DEBUG
@@ -10,7 +13,7 @@ using namespace std;
 #endif
 
 
-visualizer_parser::CParser::CParser() 
+parser::CParser::CParser() 
 {
 	m_pScan = new CScanner();
 	m_bTrace = FALSE;
@@ -19,7 +22,7 @@ visualizer_parser::CParser::CParser()
 }
 
 
-visualizer_parser::CParser::~CParser()
+parser::CParser::~CParser()
 {
 	SAFE_DELETE(m_pScan);
 
@@ -29,13 +32,16 @@ visualizer_parser::CParser::~CParser()
 //---------------------------------------------------------------------
 // 튜토리얼 스크립트를 파싱한다.
 //---------------------------------------------------------------------
-SVisualizerScript* visualizer_parser::CParser::Parse( const std::string &fileName, BOOL bTrace )
+SVisualizerScript* parser::CParser::Parse( const std::string &fileName, BOOL bTrace )
 {
 	if( !m_pScan->LoadFile(fileName.c_str(), bTrace) )
 		return NULL;
 
 	m_fileName = fileName;
-	cout << fileName;
+//	cout << fileName;
+	((CMainFrame*)::AfxGetMainWnd())->GetOutputWnd().AddString(L"Compile...");
+	((CMainFrame*)::AfxGetMainWnd())->GetOutputWnd().AddString( 
+		common::string2wstring(fileName).c_str() );	
 
 	m_Token = m_pScan->GetToken();
 	if( ENDFILE == m_Token )
@@ -51,6 +57,7 @@ SVisualizerScript* visualizer_parser::CParser::Parse( const std::string &fileNam
 		SyntaxError( " code ends before file " );
 		PrintToken( m_Token, m_pScan->GetTokenStringQ(0) );
 		m_pScan->Clear();
+		RemoveVisualizerScript(script);
 		return NULL;
 	}
 
@@ -59,7 +66,7 @@ SVisualizerScript* visualizer_parser::CParser::Parse( const std::string &fileNam
 
 
 // 		script -> (autoexpand | visualizer) [script]
-SVisualizerScript* visualizer_parser::CParser::visualizerscript()
+SVisualizerScript* parser::CParser::visualizerscript()
 {
 	SVisualizerScript *pVisScr = NULL;
 
@@ -91,7 +98,7 @@ SVisualizerScript* visualizer_parser::CParser::visualizerscript()
 		}
 		else
 		{
-			visualizer_parser::RemoveType_Stmts(pMatchType);
+			parser::RemoveType_Stmts(pMatchType);
 		}
 	}
 	if (pVisScr)
@@ -105,7 +112,7 @@ SVisualizerScript* visualizer_parser::CParser::visualizerscript()
 // 			stringview '(' text-visualizer-expression ')'
 // 			children '(' expanded-contents-expression ')'
 // 			'}'
-SVisualizer* visualizer_parser::CParser::visualizer()
+SVisualizer* parser::CParser::visualizer()
 {
 	SVisualizer *p=NULL;
 	if (LBRACE == m_Token)
@@ -133,7 +140,7 @@ SVisualizer* visualizer_parser::CParser::visualizer()
 }
 
  // preview '(' preview_string_expression ')'
-SStatements* visualizer_parser::CParser::preview()
+SStatements* parser::CParser::preview()
 {
 	SStatements*p = NULL;
 	if (PREVIEW == m_Token)
@@ -147,7 +154,7 @@ SStatements* visualizer_parser::CParser::preview()
 }
 
 //stringview '(' text-visualizer-expression ')'
-SStatements* visualizer_parser::CParser::stringview()
+SStatements* parser::CParser::stringview()
 {
 	SStatements*p = NULL;
 	if (STRINGVIEW == m_Token)
@@ -161,7 +168,7 @@ SStatements* visualizer_parser::CParser::stringview()
 }
 
 //children '(' expanded-contents-expression ')'
-SStatements* visualizer_parser::CParser::children()
+SStatements* parser::CParser::children()
 {
 	SStatements*p = NULL;
 	if ( CHILDREN == m_Token)
@@ -191,7 +198,7 @@ SStatements* visualizer_parser::CParser::children()
 // 		statement_list->	(expression | simple_exp | vis_command)  [, statement_list]
 // 		| e
 // 			;
-SStatements* visualizer_parser::CParser::statements()
+SStatements* parser::CParser::statements()
 {
 	SStatements *stmt;
 	if (IsVisCommand(m_Token))
@@ -236,6 +243,7 @@ SStatements* visualizer_parser::CParser::statements()
 			while (RBRACKET != m_Token && cnt < 10)
 			{
 				text->str += m_pScan->GetTokenStringQ(0);
+				text->str += " ";
 				Match(m_Token);
 				++cnt;
 			}
@@ -270,7 +278,7 @@ SStatements* visualizer_parser::CParser::statements()
 }
 
 // , format
-Display_Format visualizer_parser::CParser::display_format()
+Display_Format parser::CParser::display_format()
 {
 	Match(COMMA);
 	Display_Format reval = Disp_D;
@@ -314,7 +322,7 @@ Display_Format visualizer_parser::CParser::display_format()
 }
 
 
-bool visualizer_parser::CParser::IsVisCommand(Tokentype tok)
+bool parser::CParser::IsVisCommand(Tokentype tok)
 {
 	switch(tok)
 	{
@@ -333,7 +341,7 @@ bool visualizer_parser::CParser::IsVisCommand(Tokentype tok)
 // 		simple_exp ->	text ':' '[' expression [,format] ']'
 //							| '[' expression [,format] ']'
 // 			;
-SSimpleExp* visualizer_parser::CParser::simple_exp()
+SSimpleExp* parser::CParser::simple_exp()
 { 
 	SSimpleExp *p = NULL;
 
@@ -353,7 +361,7 @@ SSimpleExp* visualizer_parser::CParser::simple_exp()
 
 // 		vis_command ->	if_stmt | array_stmt | list_stmt | tree_stmt
 // 			;
-SStatements* visualizer_parser::CParser::viscommand() 
+SStatements* parser::CParser::viscommand() 
 {
 	SStatements *p=NULL;
 	switch(m_Token)
@@ -383,7 +391,7 @@ SStatements* visualizer_parser::CParser::viscommand()
 // 			[ '#elif' '(' expression ')' '(' statement_list')' ]
 // 		[ '#else' '(' statement_list ')' ]
 // 		;
-SIf_Stmt* visualizer_parser::CParser::if_stmt() 
+SIf_Stmt* parser::CParser::if_stmt() 
 {
 	SIf_Stmt *p = new SIf_Stmt;
 	p->elif_stmt = NULL;
@@ -414,7 +422,7 @@ SIf_Stmt* visualizer_parser::CParser::if_stmt()
 
 
 // #elif' '(' expression ')' '(' statement_list')' 
-SElif_Stmt* visualizer_parser::CParser::elif_stmt()
+SElif_Stmt* parser::CParser::elif_stmt()
 {
 	SElif_Stmt *p = NULL;
 	Match(ELIF);
@@ -440,7 +448,7 @@ SElif_Stmt* visualizer_parser::CParser::elif_stmt()
 // 
 // 		tree_stmt ->	'#tree' '(' bracket_inner_stmt ')'  [: expression]
 // 		;
-SVisBracketIterator_Stmt* visualizer_parser::CParser::visbracketiterator_stmt() 
+SVisBracketIterator_Stmt* parser::CParser::visbracketiterator_stmt() 
 {
 	SVisBracketIterator_Stmt *p = NULL;
 
@@ -475,7 +483,7 @@ SVisBracketIterator_Stmt* visualizer_parser::CParser::visbracketiterator_stmt()
 // 											[, bracket_inner_stmt]
 // 											| e
 // 			;
-SBracket_Inner_Stmts* visualizer_parser::CParser::bracket_inner_stmts() 
+SBracket_Inner_Stmts* parser::CParser::bracket_inner_stmts() 
 {
 	SBracket_Inner_Stmts *p = new SBracket_Inner_Stmts;
 	ZeroMemory(p, sizeof(SBracket_Inner_Stmts));
@@ -562,7 +570,7 @@ SBracket_Inner_Stmts* visualizer_parser::CParser::bracket_inner_stmts()
 
 // autoexpand rule
 // 			autoexpand -> 	type '=' disp_format+
-SAutoExp* visualizer_parser::CParser::autoexpand() 
+SAutoExp* parser::CParser::autoexpand() 
 {
 	SAutoExp *p = NULL;
 	if (ASSIGN == m_Token)
@@ -575,7 +583,7 @@ SAutoExp* visualizer_parser::CParser::autoexpand()
 }
 
 //			disp_format ->	text '<' expression [,format] '>'
-SDisp_Format* visualizer_parser::CParser::disp_format() 
+SDisp_Format* parser::CParser::disp_format() 
 {
 	SDisp_Format *p = NULL;
 	SExpression *text = expression();
@@ -600,7 +608,7 @@ SDisp_Format* visualizer_parser::CParser::disp_format()
 
 
 // types -> type { | type }
-SType_Stmts* visualizer_parser::CParser::types()
+SType_Stmts* parser::CParser::types()
 {
 	SType_Stmt *pt = type();
 	if (!pt) return NULL;
@@ -625,7 +633,7 @@ SType_Stmts* visualizer_parser::CParser::types()
 
 // type_id -> id
 //					| id::id
-SType_Stmt* visualizer_parser::CParser::type() 
+SType_Stmt* parser::CParser::type() 
 {
 	SType_Stmt *p = NULL;
 	if (ID == m_Token)
@@ -675,7 +683,7 @@ SType_Stmt* visualizer_parser::CParser::type()
 
 // template_args -> type {, type}
 //							| *
-SType_TemplateArgs* visualizer_parser::CParser::template_args()
+SType_TemplateArgs* parser::CParser::template_args()
 {
 	SType_TemplateArgs *p = new SType_TemplateArgs;
 	p->next = NULL;
@@ -694,7 +702,7 @@ SType_TemplateArgs* visualizer_parser::CParser::template_args()
 //			| id::id
 //			| id
 //			| *
-std::string visualizer_parser::CParser::type_sub()
+std::string parser::CParser::type_sub()
 {
 	std::string str = "";
 
@@ -732,7 +740,7 @@ std::string visualizer_parser::CParser::type_sub()
 // 		expression ->	term [condition_op expression]
 //								|  term [ '[' expression ']' ]
 // 		;
-SExpression* visualizer_parser::CParser::expression() 
+SExpression* parser::CParser::expression() 
 {
 	SExpression *t = term();
 	if (!t) return NULL;
@@ -759,7 +767,7 @@ SExpression* visualizer_parser::CParser::expression()
 	return t;
 }
 
-bool visualizer_parser::CParser::IsConditionOp(Tokentype tok)
+bool parser::CParser::IsConditionOp(Tokentype tok)
 {
 	switch (tok)
 	{
@@ -779,7 +787,7 @@ bool visualizer_parser::CParser::IsConditionOp(Tokentype tok)
 
 // 		term ->		mul_term [add_op term]
 // 		;
-SExpression* visualizer_parser::CParser::term() 
+SExpression* parser::CParser::term() 
 {
 	SExpression *mul = mul_term();
 	if (IsAddOp(m_Token))
@@ -795,7 +803,7 @@ SExpression* visualizer_parser::CParser::term()
 }
 
 
-bool visualizer_parser::CParser::IsAddOp(Tokentype tok)
+bool parser::CParser::IsAddOp(Tokentype tok)
 {
 	switch (tok)
 	{
@@ -810,7 +818,7 @@ bool visualizer_parser::CParser::IsAddOp(Tokentype tok)
 // 		mul_term ->	factor [mul_op mul_term]
 // 		| factor
 // 			;
-SExpression* visualizer_parser::CParser::mul_term() 
+SExpression* parser::CParser::mul_term() 
 {
 	SExpression *fac = factor();
 	if (IsMultiOp(m_Token))
@@ -825,7 +833,7 @@ SExpression* visualizer_parser::CParser::mul_term()
 	return fac;
 }
 
-bool visualizer_parser::CParser::IsMultiOp(Tokentype tok)
+bool parser::CParser::IsMultiOp(Tokentype tok)
 {
 	switch (tok)
 	{
@@ -843,7 +851,7 @@ bool visualizer_parser::CParser::IsMultiOp(Tokentype tok)
 // 		prefix_exp ->	[prefix_op] primary_expression
 // 			;
 
-SExpression* visualizer_parser::CParser::factor() 
+SExpression* parser::CParser::factor() 
 {
 	SExpression *p = NULL;
 	Tokentype prefix = NONE;
@@ -862,7 +870,7 @@ SExpression* visualizer_parser::CParser::factor()
 
 
 // prefix_op ->	+ | - | * | & | ! | ++ | --
-bool visualizer_parser::CParser::IsPrefixOp(Tokentype tok)
+bool parser::CParser::IsPrefixOp(Tokentype tok)
 {
 	switch (tok)
 	{
@@ -885,7 +893,7 @@ bool visualizer_parser::CParser::IsPrefixOp(Tokentype tok)
 // 			| '(' expression ')'
 // 			;
 
-SExpression* visualizer_parser::CParser::primary_expression() 
+SExpression* parser::CParser::primary_expression() 
 {
 	SExpression*p=NULL;
 	switch (m_Token)
@@ -934,7 +942,7 @@ SExpression* visualizer_parser::CParser::primary_expression()
 // 		variable -> 	typeName [ '.' typeName ]
 // 		| typeName ['->' typeName ]
 // 		;
-SExpression* visualizer_parser::CParser::variable() 
+SExpression* parser::CParser::variable() 
 {
 	SExpression*p = NewExpression(VariableK);
 	p->str = id();
@@ -954,7 +962,7 @@ SExpression* visualizer_parser::CParser::variable()
 	return p;
 }
 
-std::string visualizer_parser::CParser::number()
+std::string parser::CParser::number()
 {
 	std::string str = "";
 	str = m_pScan->GetTokenStringQ(0);
@@ -962,21 +970,21 @@ std::string visualizer_parser::CParser::number()
 	return str;
 }
 
-int visualizer_parser::CParser::num()
+int parser::CParser::num()
 {
 	int n = atoi(m_pScan->GetTokenStringQ(0));
 	Match(NUM);
 	return n;
 }
 
-std::string visualizer_parser::CParser::id()
+std::string parser::CParser::id()
 {
 	std::string str = m_pScan->GetTokenStringQ(0);
 	Match( ID );
 	return str;
 }
 
-BOOL visualizer_parser::CParser::Match( Tokentype t )
+BOOL parser::CParser::Match( Tokentype t )
 {
 	if( m_Token == t )
 	{
@@ -985,13 +993,17 @@ BOOL visualizer_parser::CParser::Match( Tokentype t )
 	else
 	{
 		SyntaxError( "unexpected token -> " );
-		PrintToken( m_Token, m_pScan->GetTokenStringQ(0) );
+
+		((CMainFrame*)::AfxGetMainWnd())->GetOutputWnd().AddString( 
+			common::string2wstring(
+				PrintToken( m_Token, m_pScan->GetTokenStringQ(0) )).c_str() );
+
 		printf( "\n" );
 	}
 	return TRUE;
 }
 
-void visualizer_parser::CParser::SyntaxError( char *szMsg, ... )
+void parser::CParser::SyntaxError( char *szMsg, ... )
 {
 	m_bError = TRUE;
 	char buf[ 256];
@@ -999,8 +1011,12 @@ void visualizer_parser::CParser::SyntaxError( char *szMsg, ... )
 	va_start(marker, szMsg);
 	vsprintf_s(buf, sizeof(buf), szMsg, marker);
 	va_end(marker);
-	printf( ">>>" );
-	//printf( "Syntax error at line %s %d: %s", m_FileName, m_pScan->GetLineNo(), buf );
-	cout << "Syntax error at line " << m_fileName << " " << m_pScan->GetLineNo() <<  ": " << buf ;
+
+	std::stringstream ss;
+	ss << "Syntax error at line " << m_fileName << " " << m_pScan->GetLineNo() <<  ": " << buf ;
+
+	((CMainFrame*)::AfxGetMainWnd())->GetOutputWnd().AddString( L">>>" );
+ 	((CMainFrame*)::AfxGetMainWnd())->GetOutputWnd().AddString( 
+ 		common::string2wstring(ss.str()).c_str() );
 }
 

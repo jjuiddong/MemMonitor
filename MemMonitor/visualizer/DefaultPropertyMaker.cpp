@@ -3,45 +3,49 @@
 #include "DefaultPropertyMaker.h"
 #include "PropertyMaker.h"
 #include "../Lib/DiaWrapper.h"
-#include "../PropertiesWnd.h"
+#include "../DataProperty.h"
+#include "VisualizerDefine.h"
 
 
 namespace visualizer
 {
 	using namespace sharedmemory;
-	using namespace visualizer_parser;
+	using namespace parser;
 
-	CPropertiesWnd *n_pProperty = NULL;
+	CDataProperty *n_pProperty = NULL;
 
 	// make property
-	void		MakeProperty_Root(CMFCPropertyGridProperty *pParentProp, 
-		IDiaSymbol *pSymbol, const SMemoryInfo &memInfo);
+	void		MakeProperty_Root(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol, const int depth );
 
-	void		MakeProperty_UDT(CMFCPropertyGridProperty *pParentProp, 
-		IDiaSymbol *pSymbol, const SMemoryInfo &memInfo);
+	bool		MakeProperty_Child(  CMFCPropertyGridProperty *pParentProp,  const SSymbolInfo &symbol, const int depth );
 
-	void		MakeProperty_BaseClass(CMFCPropertyGridProperty *pParentProp, 
-		IDiaSymbol *pSymbol, const SMemoryInfo &memInfo);
+	void		MakeProperty_UDT(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol, const int depth );
 
-	void		MakeProperty_Pointer(CMFCPropertyGridProperty *pParentProp, 
-		IDiaSymbol *pSymbol, const SMemoryInfo &memInfo);
+	void		MakeProperty_BaseClass(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol, const int depth );
 
-	void		MakeProperty_Data(CMFCPropertyGridProperty *pParentProp, 
-		IDiaSymbol *pSymbol, const SMemoryInfo &memInfo);
+	void		MakeProperty_Pointer(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol, const int depth );
 
-	void		MakeProperty_Array(CMFCPropertyGridProperty *pParentProp, 
-		IDiaSymbol *pSymbol, const SMemoryInfo &memInfo);
+	void		MakeProperty_Data(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol, const int depth );
 
-	void		MakeProperty_Enum(CMFCPropertyGridProperty *pParentProp, 
-		IDiaSymbol *pSymbol, const SMemoryInfo &memInfo);
+	void		MakeProperty_Array(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol, const int depth );
 
-	CMFCPropertyGridProperty* MakeProperty_BaseType(
-		CMFCPropertyGridProperty *pParentProp, 
-		const std::string valueName, IDiaSymbol *pSymbol, 
-		const SMemoryInfo &memInfo );
+	CMFCPropertyGridProperty* MakeProperty_BaseType(CMFCPropertyGridProperty *pParentProp, 
+		const std::string valueName,  const SSymbolInfo &symbol );
+
+	CMFCPropertyGridProperty* MakeProperty_PointerData(CMFCPropertyGridProperty *pParentProp, 
+		const SSymbolInfo &symbol );
+
+ 	CMFCPropertyGridProperty* MakeProperty_ArrayData(CMFCPropertyGridProperty *pParentProp, 
+ 		const SSymbolInfo &symbol );
+
+	CMFCPropertyGridProperty* MakeProperty_UDTData(CMFCPropertyGridProperty *pParentProp, 
+		const SSymbolInfo &symbol );
+
+	CMFCPropertyGridProperty* MakeProperty_BaseClassData(CMFCPropertyGridProperty *pParentProp, 
+		const SSymbolInfo &symbol);
 
 	void		AddProperty(CMFCPropertyGridProperty *pParentProp, 
-		CMFCPropertyGridProperty *prop,  STypeData *pTypeData);
+		CMFCPropertyGridProperty *prop,  const SSymbolInfo *pSymbol, STypeData *pTypeData);
 
 	_variant_t GetValue(IDiaSymbol *pSymbol, void *pMemPtr);
 
@@ -56,7 +60,7 @@ using namespace visualizer;
 // 기본형식으로 property창에 심볼을 출력한다.
 // symbolName : 공유메모리에 저장된 심볼이름
 //------------------------------------------------------------------------
-bool visualizer::MakeProperty_DefaultForm( CPropertiesWnd *pProperties,  const string &symbolName )
+bool visualizer::MakeProperty_DefaultForm( CDataProperty *pProperties,  const string &symbolName )
 {
 	const std::string str = sharedmemory::ParseObjectName(symbolName);
 
@@ -70,8 +74,8 @@ bool visualizer::MakeProperty_DefaultForm( CPropertiesWnd *pProperties,  const s
 		return false;
 	}
 
-	MakeProperty_DefaultForm(pProperties, NULL, pSymbol, memInfo);
-	pSymbol->Release();
+	memInfo.name = symbolName;
+	MakeProperty_DefaultForm(pProperties, NULL, SSymbolInfo(pSymbol, memInfo));
 	return true;
 }
 
@@ -79,7 +83,7 @@ bool visualizer::MakeProperty_DefaultForm( CPropertiesWnd *pProperties,  const s
 //------------------------------------------------------------------------
 // 
 //------------------------------------------------------------------------
-bool visualizer::MakeProperty_DefaultForm(  CPropertiesWnd *pProperties, 
+bool visualizer::MakeProperty_DefaultForm(  CDataProperty *pProperties, 
 								 CMFCPropertyGridProperty *pParentProp,  const string &symbolName )
 {
 
@@ -90,12 +94,124 @@ bool visualizer::MakeProperty_DefaultForm(  CPropertiesWnd *pProperties,
 //------------------------------------------------------------------------
 // 
 //------------------------------------------------------------------------
-bool visualizer::MakeProperty_DefaultForm(  CPropertiesWnd *pProperties,
+bool visualizer::MakeProperty_DefaultForm(  CDataProperty *pProperties,
 				CMFCPropertyGridProperty *pParentProp,  
-				 IDiaSymbol *pSymbol, const sharedmemory::SMemoryInfo &memInfo )
+				 const SSymbolInfo &symbol )
 {
 	n_pProperty = pProperties;
-	MakeProperty_Root(pParentProp, pSymbol, memInfo);
+	MakeProperty_Root(pParentProp, symbol, 2);
+	return true;
+}
+
+
+//------------------------------------------------------------------------
+//  symbol.pSym 의 자식을 pParentProp에 추가한다.
+//------------------------------------------------------------------------
+bool	 visualizer::MakePropertyChild_DefaultForm(  CDataProperty *pProperties, 
+												   CMFCPropertyGridProperty *pParentProp,  const SSymbolInfo &symbol)
+{
+	n_pProperty = pProperties;
+	MakeProperty_Child(pParentProp, symbol, 2);
+	return true;
+
+/*
+	const std::string name = dia::GetSymbolName(symbol.pSym);
+
+	SSymbolInfo baseSymbol = symbol;
+	baseSymbol.isNotRelease = true;
+
+	enum SymTagEnum symTag;
+ 	HRESULT hr = symbol.pSym->get_symTag((DWORD*)&symTag);
+	switch (symTag)
+	{
+	case SymTagBaseClass:
+	case SymTagData:
+		{
+			IDiaSymbol *pBaseType;
+			hr = symbol.pSym->get_type(&pBaseType);
+			baseSymbol.pSym = pBaseType;
+			baseSymbol.isNotRelease = false;
+		}
+		break;
+	}
+
+	CComPtr<IDiaEnumSymbols> pEnumChildren;
+	if (SUCCEEDED(baseSymbol.pSym->findChildren(SymTagNull, NULL, nsNone, &pEnumChildren))) 
+	{
+		IDiaSymbol *pChild;
+		ULONG celt = 0;
+		while (SUCCEEDED(pEnumChildren->Next(1, &pChild, &celt)) && (celt == 1)) 
+		{
+			enum SymTagEnum tag;
+			pChild->get_symTag( (DWORD*)&tag );
+			switch (tag)
+			{
+			case SymTagVTable:
+			case SymTagFunction:
+			case SymTagEnum:
+			case SymTagTypedef:
+				pChild->Release();
+				continue;
+				break;
+			}
+
+			LONG offset = dia::GetSymbolLocation(pChild);
+			SMemoryInfo memberMemInfo;
+			memberMemInfo.name = dia::GetSymbolName(pChild);
+			memberMemInfo.ptr = (BYTE*)baseSymbol.mem.ptr + offset;
+			MakeProperty_Root(pParentProp, SSymbolInfo(pChild, memberMemInfo), 1);
+		}
+	}
+/**/
+	return true;
+}
+
+
+//------------------------------------------------------------------------
+//  symbol을 pParentProp의 자식으로 추가한다.
+//------------------------------------------------------------------------
+bool	 visualizer::MakeProperty_Child(  CMFCPropertyGridProperty *pParentProp,  
+									   const SSymbolInfo &symbol, const int depth )
+{
+	if (depth <= 0)
+		return true;
+	enum SymTagEnum symtag;
+	if (S_OK != symbol.pSym->get_symTag((DWORD*)&symtag))
+		return true;
+
+	switch (symtag)
+	{
+	case SymTagArrayType:
+		MakeProperty_Array(pParentProp, symbol, depth);
+		break;
+
+	case SymTagPointerType:
+		MakeProperty_Pointer(pParentProp, symbol, depth);
+		break;
+
+	case SymTagBaseClass:
+		MakeProperty_BaseClass(pParentProp, symbol, depth);
+		break;
+
+	case SymTagUDT:
+		MakeProperty_UDT(pParentProp, symbol, depth);
+		break;
+
+	case SymTagData: 
+		{
+			IDiaSymbol *pBaseType;
+			HRESULT hr = symbol.pSym->get_type(&pBaseType);
+			ASSERT_RETV(S_OK == hr, false);
+			MakeProperty_Child(pParentProp, SSymbolInfo(pBaseType,symbol.mem), depth);
+		}
+		break;
+
+	case SymTagTypedef:
+	case SymTagEnum:
+	default:
+		break;
+	}
+
 	return true;
 }
 
@@ -103,94 +219,50 @@ bool visualizer::MakeProperty_DefaultForm(  CPropertiesWnd *pProperties,
 //------------------------------------------------------------------------
 // Property 생성
 //------------------------------------------------------------------------
-void visualizer::MakeProperty_Root(CMFCPropertyGridProperty *pParentProp, 
-											IDiaSymbol *pSymbol, const SMemoryInfo &memInfo)
+void visualizer::MakeProperty_Root(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol, 
+								   const int depth )
 {
+	if (depth <= 0)
+		return;
 	enum SymTagEnum symtag;
-	if (S_OK != pSymbol->get_symTag((DWORD*)&symtag))
+	if (S_OK != symbol.pSym->get_symTag((DWORD*)&symtag))
 		return;
 
 	switch (symtag)
 	{
 	case SymTagData: 
-		MakeProperty_Data(pParentProp, pSymbol, memInfo);
+		MakeProperty_Data(pParentProp, symbol, depth);
 		break;
 
 	case SymTagArrayType:
-		MakeProperty_Array(pParentProp, pSymbol, memInfo);
+		MakeProperty_Array(pParentProp, symbol, depth);
 		break;
 
 	case SymTagPointerType:
-		MakeProperty_Pointer(pParentProp, pSymbol, memInfo);
+		MakeProperty_Pointer(pParentProp, symbol, depth);
 		break;
 
 	case SymTagBaseClass:
-		MakeProperty_BaseClass(pParentProp, pSymbol, memInfo);
+		{
+			CMFCPropertyGridProperty *pProp = MakeProperty_BaseClassData(pParentProp, symbol);
+			if (pProp)
+				MakeProperty_Child(pProp, symbol, depth-1);
+		}
 		break;
 
 	case SymTagUDT:
-		MakeProperty_UDT(pParentProp, pSymbol, memInfo);
-		break;
-
-	case SymTagEnum:
-		MakeProperty_Enum(pParentProp, pSymbol, memInfo);
+		MakeProperty_UDT(pParentProp, symbol, depth);
 		break;
 
 	case SymTagTypedef:
-	case SymTagVTable:
-	case SymTagFunction:
+		break;
+
+	case SymTagEnum:
 		break;
 
 	default:
-		{
-			// 			std::string name = dia::GetSymbolName(pSymbol);
-			// 			CMainFrame *pFrm = (CMainFrame*)::AfxGetMainWnd();
-			// 			std::stringstream ss;
-			// 			ss << name << "값의 데이타를 Property애 추가하지 못했습니다.";
-			// 			pFrm->GetOutputWnd().AddString( common::string2wstring(ss.str()).c_str() );
-		}
 		break;
 	}
-}
-
-
-//------------------------------------------------------------------------
-// Enum 출력
-//------------------------------------------------------------------------
-void	visualizer ::MakeProperty_Enum(CMFCPropertyGridProperty *pParentProp, 
-													IDiaSymbol *pSymbol, const SMemoryInfo &memInfo)
-{
-	// 	const std::string name = dia::GetSymbolName(pSymbol);
-	// 
-	// 	CMFCPropertyGridProperty *pProp = 
-	// 		new CMFCPropertyGridProperty( common::string2wstring(name).c_str() ); 
-	// 
-	// 	pProp->AddOption( L"test1" );
-	// 	pProp->AddOption( L"test2" );
-	// 	pProp->AddOption( L"test3" );
-	// 	pProp->AddOption( L"test4" );
-
-
-	// 	ULONGLONG length = 0;
-	// 	HRESULT hr = pSymbol->get_length(&length);
-	// 	assert(S_OK == hr);
-	// 
-	// 	CComPtr<IDiaEnumSymbols> pEnumChildren;
-	// 	IDiaSymbol *pChild;
-	// 	ULONG celt = 0;
-	// 	if (SUCCEEDED(pSymbol->findChildren(SymTagNull, NULL, nsNone, &pEnumChildren))) 
-	// 	{
-	// 		while (SUCCEEDED(pEnumChildren->Next(1, &pChild, &celt)) && (celt == 1)) 
-	// 		{
-	// 			SMemoryInfo udtMemInfo = SMemoryInfo(name.c_str(), memInfo.ptr, (size_t)length);
-	// 
-	// 			MakeProperty(pProp, pChild, udtMemInfo);
-	// 			pChild->Release();
-	// 		}
-	// 	}
-	// 
-	// 	pProp->Expand(FALSE); // 일단 접어놓는다.
-	//	AddProperty(pParentProp, pProp, STypeData(SymTagUDT, VT_EMPTY, NULL));
 }
 
 
@@ -198,98 +270,89 @@ void	visualizer ::MakeProperty_Enum(CMFCPropertyGridProperty *pParentProp,
 // 기본 클래스 
 //------------------------------------------------------------------------
 void	visualizer ::MakeProperty_BaseClass(CMFCPropertyGridProperty *pParentProp, 
-														 IDiaSymbol *pSymbol, const SMemoryInfo &memInfo)
+											const SSymbolInfo &symbol, const int depth )
 {
-	CComPtr<IDiaSymbol> pBaseType;
-	HRESULT hr = pSymbol->get_type(&pBaseType);
+	IDiaSymbol* pBaseType;
+	HRESULT hr = symbol.pSym->get_type(&pBaseType);
 	ASSERT_RET(hr == S_OK);
 
-	const std::string name = GetSymbolName(pBaseType);
-
-	ULONGLONG length = 0;
-	hr = pBaseType->get_length(&length);
-	ASSERT_RET(hr == S_OK);
-
-	LONG offset = 0;
-	hr =  pSymbol->get_offset(&offset);
-	ASSERT_RET(hr == S_OK);
-
-	BYTE *ptr = (BYTE*)memInfo.ptr + offset;
-	SMemoryInfo newMemInfo(name.c_str(), ptr, (size_t)length);
-	MakeProperty_Root(pParentProp, pBaseType, newMemInfo);
+	LocationType locType;
+	const LONG offset = dia::GetSymbolLocation(symbol.pSym, &locType);
+	BYTE *ptr = (BYTE*)symbol.mem.ptr + offset;
+	SMemoryInfo newMemInfo(symbol.mem.name.c_str(), ptr, 0);
+	MakeProperty_Child(pParentProp, SSymbolInfo(pBaseType, newMemInfo), depth);
 }
 
+//------------------------------------------------------------------------
+// baseclass type preview
+//------------------------------------------------------------------------
+CMFCPropertyGridProperty* visualizer::MakeProperty_BaseClassData(
+	CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol)
+{
+	CMFCPropertyGridProperty *pProp = new CMFCPropertyGridProperty(
+		common::string2wstring(symbol.mem.name).c_str());
+	AddProperty(pParentProp, pProp, &symbol, &STypeData(SymTagBaseClass, VT_EMPTY, NULL));
+	return pProp;
+}
 
 //------------------------------------------------------------------------
 // User Define Type 
 //------------------------------------------------------------------------
-void visualizer ::MakeProperty_UDT(CMFCPropertyGridProperty *pParentProp, 
-												IDiaSymbol *pSymbol, const SMemoryInfo &memInfo)
+void visualizer ::MakeProperty_UDT(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol,
+								   const int depth)
 {
-	const std::string name = dia::GetSymbolName(pSymbol);
+	if (!pParentProp)
+		pParentProp = MakeProperty_UDTData(pParentProp, symbol);
+	if (!pParentProp)
+		return;
 
-	const bool isVisualizerType = visualizer::MakeVisualizerProperty( n_pProperty, pParentProp, memInfo, name);
-	if (isVisualizerType)
+	if (depth > 0)
 	{
-		// 아직 하는일 없음 
-	}
-	else
-	{
-		CMFCPropertyGridProperty *pProp = 
-			new CMFCPropertyGridProperty( common::string2wstring(name).c_str() ); 
-
-		ULONGLONG length = 0;
-		HRESULT hr = pSymbol->get_length(&length);
-		assert(S_OK == hr);
-
 		CComPtr<IDiaEnumSymbols> pEnumChildren;
-		IDiaSymbol *pChild;
-		ULONG celt = 0;
-		if (SUCCEEDED(pSymbol->findChildren(SymTagNull, NULL, nsNone, &pEnumChildren))) 
+		if (SUCCEEDED(symbol.pSym->findChildren(SymTagNull, NULL, nsNone, &pEnumChildren))) 
 		{
+			IDiaSymbol *pChild;
+			ULONG celt = 0;
 			while (SUCCEEDED(pEnumChildren->Next(1, &pChild, &celt)) && (celt == 1)) 
 			{
-				SMemoryInfo udtMemInfo = SMemoryInfo(name.c_str(), memInfo.ptr, (size_t)length);
-
-				MakeProperty_Root(pProp, pChild, udtMemInfo);
-				pChild->Release();
+				LONG offset = dia::GetSymbolLocation(pChild);
+				SMemoryInfo memberMemInfo;
+				memberMemInfo.name = dia::GetSymbolName(pChild);
+				memberMemInfo.ptr = (BYTE*)symbol.mem.ptr + offset;
+				MakeProperty_Root(pParentProp, SSymbolInfo(pChild, memberMemInfo), depth-1);
 			}
 		}
-
-		pProp->Expand(FALSE); // 일단 접어놓는다.
-		AddProperty(pParentProp, pProp, &STypeData(SymTagUDT, VT_EMPTY, memInfo.ptr));
 	}
+	pParentProp->Expand(FALSE);
 }
 
 
 //------------------------------------------------------------------------
 // Pointer 타입 출력 
 //------------------------------------------------------------------------
-void	visualizer ::MakeProperty_Pointer(CMFCPropertyGridProperty *pParentProp, 
-													   IDiaSymbol *pSymbol, const SMemoryInfo &memInfo)
+void	visualizer ::MakeProperty_Pointer(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol,
+										  const int depth)
 {
-	CComPtr<IDiaSymbol> pBaseType;
-	HRESULT hr = pSymbol->get_type(&pBaseType);
+	IDiaSymbol* pBaseType;
+	HRESULT hr = symbol.pSym->get_type(&pBaseType);
 	ASSERT_RET(hr == S_OK);
 
-	ULONGLONG length = 0;
-	hr = pBaseType->get_length(&length);
-	ASSERT_RET(hr == S_OK);
+	enum SymTagEnum baseSymTag;
+	hr = pBaseType->get_symTag((DWORD*)&baseSymTag);
 
-	const std::string typeName = dia::GetSymbolTypeName(pSymbol);
-
-	void *srcPtr = (void*)*(DWORD*)memInfo.ptr;
+	void *srcPtr = (void*)*(DWORD*)symbol.mem.ptr;
 	void *newPtr = sharedmemory::MemoryMapping(srcPtr);
 
-	CMFCPropertyGridProperty *pProp = new CMFCPropertyGridProperty( 
-		common::formatw(" %s 0x%x", typeName.c_str(), newPtr).c_str() ); 
-	AddProperty( pParentProp, pProp, &STypeData(SymTagPointerType, VT_EMPTY,NULL));
-
-	if (newPtr) 
+	CMFCPropertyGridProperty *pProp = NULL;
+	if (SymTagUDT == baseSymTag)
 	{
-		SMemoryInfo ptrMemInfo(typeName.c_str(), newPtr, (size_t)length);
-		MakeProperty_Root(pProp, pBaseType, ptrMemInfo);
+		if (newPtr) 
+		{
+			SMemoryInfo ptrMemInfo(symbol.mem.name.c_str(), newPtr, (size_t)0);
+			MakeProperty_Root(pParentProp, SSymbolInfo(pBaseType, ptrMemInfo, false), depth);
+		}
 	}
+	pBaseType->Release();
 }
 
 
@@ -297,34 +360,37 @@ void	visualizer ::MakeProperty_Pointer(CMFCPropertyGridProperty *pParentProp,
 // Property창에 Control을 추가한다.
 // 변수 이름과 타입, 값을 설정한다.
 //------------------------------------------------------------------------
-void visualizer ::MakeProperty_Data(CMFCPropertyGridProperty *pParentProp, 
-												 IDiaSymbol *pSymbol,
-												 const SMemoryInfo &memInfo)
+void visualizer ::MakeProperty_Data(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol,
+									const int depth)
 {
-	CComPtr<IDiaSymbol> pBaseType;
-	HRESULT hr = pSymbol->get_type(&pBaseType);
+	IDiaSymbol* pBaseType;
+	HRESULT hr = symbol.pSym->get_type(&pBaseType);
 	ASSERT_RET(hr == S_OK);
 
 	enum SymTagEnum baseSymTag;
 	hr = pBaseType->get_symTag((DWORD*)&baseSymTag);
 	ASSERT_RET(hr == S_OK);
 
+	CMFCPropertyGridProperty *pProp;
 	switch (baseSymTag)
 	{
 	case SymTagBaseType:
 		{
-			std::string valueTypeName = dia::GetSymbolName(pSymbol) + " (" + dia::GetSymbolTypeName(pSymbol) + ")";
-			MakeProperty_BaseType( pParentProp, valueTypeName, pSymbol, memInfo );
+//			std::string valueTypeName = dia::GetSymbolName(symbol.pSym) + " (" + dia::GetSymbolTypeName(symbol.pSym) + ")";
+			string valueTypeName = symbol.mem.name + " (" + dia::GetSymbolTypeName(symbol.pSym) + ")";
+//			string valueTypeName = ;
+			MakeProperty_BaseType( pParentProp, valueTypeName, symbol);
 		}
 		break;
 
 	case SymTagEnum:
 		{
-			std::string name = dia::GetSymbolName(pSymbol);
+//			std::string name = dia::GetSymbolName(symbol.pSym);
 			std::string typeName = dia::GetSymbolTypeName(pBaseType);
-			std::string valueTypeName =  name + " (" +  typeName + ")";
-			CMFCPropertyGridProperty *pProp = 
-				new CMFCPropertyGridProperty( common::string2wstring(valueTypeName).c_str() , _T(" ") ); 
+//			std::string valueTypeName =  name + " (" +  typeName + ")";
+			std::string valueTypeName =  symbol.mem.name + " (" +  typeName + ")";
+			pProp = new CMFCPropertyGridProperty( common::string2wstring(valueTypeName).c_str() , _T(" ") ); 
+			AddProperty(pParentProp, pProp, &symbol, &STypeData(baseSymTag, VT_UI4, symbol.mem.ptr));
 
 			CComPtr<IDiaEnumSymbols> pEnumChildren;
 			IDiaSymbol *pChild;
@@ -340,156 +406,245 @@ void visualizer ::MakeProperty_Data(CMFCPropertyGridProperty *pParentProp,
 			}
 			pProp->AllowEdit(FALSE);
 
-			ULONGLONG offset = dia::GetSymbolLocation(pSymbol);
+//			ULONGLONG offset = dia::GetSymbolLocation(symbol.pSym);
 			ULONGLONG length = 0;
 			HRESULT hr = pBaseType->get_length(&length);
-			void *ptr = (BYTE*)memInfo.ptr + offset;
-			_variant_t value = dia::GetValueFromAddress( ptr, btUInt, length );
+//			void *ptr = (BYTE*)symbol.mem.ptr + offset;
+			_variant_t value = dia::GetValueFromAddress( symbol.mem.ptr, btUInt, length );
 			SetPropertyValue( pProp, value);
-
-			AddProperty(pParentProp, pProp, &STypeData(baseSymTag, VT_UI4, ptr));
 		}
 		break;
 
-	case SymTagPointerType:
 	case SymTagUDT:
+		pProp = MakeProperty_UDTData(pParentProp, symbol);
+		if (pProp)
+			MakeProperty_Child(pProp, SSymbolInfo(pBaseType, symbol.mem), depth-1);
+		//MakeProperty_UDT(pProp, SSymbolInfo(pBaseType, symbol.mem), depth); // pBaseType을 인자로 한다.
+		break;
+
 	case SymTagArrayType:
-		{
-			std::string name = dia::GetSymbolName(pSymbol);
-			std::string typeName = dia::GetSymbolTypeName(pBaseType);
-			std::string valueTypeName =  name + " (" +  typeName + ")";
-			CMFCPropertyGridProperty *pProp = NULL;
+		pProp = MakeProperty_ArrayData(pParentProp, symbol);
+		if (pProp)
+			MakeProperty_Child(pProp, SSymbolInfo(pBaseType, symbol.mem), depth-1);
+		//MakeProperty_Array(pParentProp, SSymbolInfo(pBaseType, symbol.mem), depth); // pBaseType을 인자로 한다.
+		break;
 
-			if (baseSymTag == SymTagPointerType 
-				|| baseSymTag == SymTagArrayType )
-			{
-				CComPtr<IDiaSymbol> pBaseOfBaseType;
-				hr = pBaseType->get_type(&pBaseOfBaseType);
-				ASSERT_RET(hr == S_OK);
+	case SymTagPointerType:
+		pProp = MakeProperty_PointerData(pParentProp, symbol);
+		if (pProp)
+			MakeProperty_Child(pProp, SSymbolInfo(pBaseType, symbol.mem), depth-1);
+		//MakeProperty_Pointer(pParentProp, SSymbolInfo(pBaseType, symbol.mem), depth); // pBaseType을 인자로 한다.
+		break;
 
-				enum SymTagEnum baseOfBaseSymTag;
-				hr = pBaseOfBaseType->get_symTag((DWORD*)&baseOfBaseSymTag);
-				ASSERT_RET(hr == S_OK);
-				if (SymTagBaseType == baseOfBaseSymTag)
-				{
-					BasicType btype;
-					hr = pBaseOfBaseType->get_baseType((DWORD*)&btype);
-					ASSERT_RET(hr == S_OK);
-
-					// char*, char[] 타입이라면 스트링을 출력한다.
-					if (btChar == btype)
-					{
-						void *ptr = NULL;
-						std::stringstream ss;
-						if (SymTagArrayType == baseSymTag)
-						{
-							ptr = memInfo.ptr;
-							ss << valueTypeName << " {\"" << (char*)ptr << "\"}";
-						}
-						else if (SymTagPointerType == baseSymTag)
-						{
-							void *srcPtr = (void*)*(DWORD*)memInfo.ptr;
-							ptr = sharedmemory::MemoryMapping(srcPtr);
-							if (!ptr)
-								ptr = srcPtr; // 공유메모리에 있지 않은 데이타일경우 주소만 출력한다.
-							ss << valueTypeName << " 0x" << ptr << " {\"";
-							ss << (char*)(sharedmemory::CheckValidAddress(ptr)? ptr : "not shared memory")  << "\"}";
-						}
-
-						if (ptr)
-						{
-							pProp = new CMFCPropertyGridProperty( common::string2wstring(ss.str()).c_str() );
-						}
-					}
-				}
-			}
-
-			if (!pProp)
-			{
-				pProp = new CMFCPropertyGridProperty( common::string2wstring(valueTypeName).c_str() ); 
-			}
-
-			AddProperty(pParentProp, pProp, &STypeData(baseSymTag, VT_EMPTY, NULL));
-
-			ULONGLONG offset = dia::GetSymbolLocation(pSymbol);
-			ULONGLONG length = 0;
-			HRESULT hr = pBaseType->get_length(&length);
-			assert(S_OK == hr);	
-
-			void *ptr = (BYTE*)memInfo.ptr + offset;
-			SMemoryInfo udtMemInfo = SMemoryInfo(typeName.c_str(), ptr, (size_t)length);
-			MakeProperty_Root(pProp, pBaseType, udtMemInfo); // pBaseType을 인자로 한다.			
-			pProp->Expand(FALSE);
-		}
+	default:
+		pBaseType->Release();
 		break;
 	}
 }
 
 
 //------------------------------------------------------------------------
-// pSymbol : Array Type을 가리킨다. 
+// Pointer type Preview
 //------------------------------------------------------------------------
-void visualizer ::MakeProperty_Array(CMFCPropertyGridProperty *pParentProp, 
-												  IDiaSymbol *pSymbol,
-												  const sharedmemory::SMemoryInfo &memInfo)
+CMFCPropertyGridProperty* visualizer::MakeProperty_ArrayData(CMFCPropertyGridProperty *pParentProp, 
+												 const SSymbolInfo &symbol )
 {
-	ULONGLONG length=0;
-	ULONGLONG element_length=0;
-	pSymbol->get_length(&length);
+	CMFCPropertyGridProperty *pProp = NULL;
+
+	CComPtr<IDiaSymbol> pArrayType;
+	HRESULT hr = symbol.pSym->get_type(&pArrayType); // ArrayDataType
+	ASSERT_RETV(S_OK == hr, pProp);
 
 	CComPtr<IDiaSymbol> pElementType;	// 배열 개개의 타입
-	if (S_FALSE == pSymbol->get_type(&pElementType))
-	{
-		// pSymbol은 array타입이기 때문에 basetype을 가져야 한다.
-		// 그렇지 않다면 pdb파일이 깨졌거나, 시스템상 오류이다.
-		assert(0);
-		return;
-	}
-
-	HRESULT result = pElementType->get_length(&element_length);
-	assert(S_OK == result);
+	hr = pArrayType->get_type(&pElementType);
+	ASSERT_RETV(S_OK == hr, pProp);
 
 	enum SymTagEnum elemSymTag;
-	result = pElementType->get_symTag((DWORD*)&elemSymTag);
-	assert(S_OK == result);
+	hr = pElementType->get_symTag((DWORD*)&elemSymTag);
+	ASSERT(S_OK == hr);
+
+	const string typeName = dia::GetSymbolTypeName(symbol.pSym);
+	stringstream ss;
+
+	if (//SymTagData == elemSymTag ||
+		SymTagBaseType == elemSymTag) // BaseType Array
+	{
+		BasicType btype;
+		hr = pElementType->get_baseType((DWORD*)&btype);
+		ASSERT_RETV(S_OK == hr, pProp);
+
+		// char*, char[] 타입이라면 스트링을 출력한다.
+		if (btChar == btype)
+			ss << symbol.mem.name << " {\"" << (char*)symbol.mem.ptr << "\"}";
+		else
+			ss << symbol.mem.name << " " << symbol.mem.ptr << " (" << typeName << ")";
+	}
+	else // UDT Array
+	{
+		ss << symbol.mem.name << " (" << typeName << ")";
+	}
+
+	pProp = new CMFCPropertyGridProperty( common::string2wstring(ss.str()).c_str() ); 
+	AddProperty(pParentProp, pProp, &symbol,  &STypeData(SymTagArrayType, VT_EMPTY, NULL) );
+
+	return pProp;
+}
+
+
+//------------------------------------------------------------------------
+// Pointer Type Preview 
+//------------------------------------------------------------------------
+CMFCPropertyGridProperty* visualizer::MakeProperty_PointerData(
+	CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol )
+{
+	CMFCPropertyGridProperty *pProp = NULL;
+
+	CComPtr<IDiaSymbol> pPointerType;
+	HRESULT hr = symbol.pSym->get_type(&pPointerType);
+	ASSERT_RETV(hr == S_OK, pProp);  // PointerType
+
+	CComPtr<IDiaSymbol> pBaseType;
+	hr = pPointerType->get_type(&pBaseType);
+	ASSERT_RETV(hr == S_OK, pProp);  // BasicDataType or UDTDataType
+
+	void *srcPtr = (void*)*(DWORD*)symbol.mem.ptr;
+	void *newPtr = sharedmemory::MemoryMapping(srcPtr);
+	if (!newPtr)
+		newPtr = srcPtr; // 공유메모리에 없는 데이타일경우 주소만 출력한다.
+
+	enum SymTagEnum baseSymTag;
+	hr = pBaseType->get_symTag((DWORD*)&baseSymTag);
+
+	const string name = dia::GetSymbolName(symbol.pSym); // debug용
+	const string typeName = dia::GetSymbolTypeName(symbol.pSym);
+	stringstream ss;
+
+	if (SymTagUDT == baseSymTag)
+	{
+		ss << symbol.mem.name << " 0x" << newPtr;
+		ss << (char*)(sharedmemory::CheckValidAddress(newPtr)? " " : " not shared memory");
+		ss << " (" << typeName << ")";
+	}
+	else if (SymTagBaseType == baseSymTag)
+	{
+		BasicType btype;
+		hr = pBaseType->get_baseType((DWORD*)&btype);
+		ASSERT_RETV(hr == S_OK, pProp);
+
+		// char* 타입이라면 스트링을 출력한다.
+		if (btChar == btype)
+		{
+			ss << symbol.mem.name << " 0x" << newPtr << " {\"";
+			ss << (char*)(sharedmemory::CheckValidAddress(newPtr)? newPtr : " not shared memory")  << "\"}";
+		}
+	}
+
+	if (ss.str().empty()) // default pointer 작업
+	{
+		ss << symbol.mem.name << " 0x" << newPtr;
+		ss << (char*)(sharedmemory::CheckValidAddress(newPtr)? " " : " not shared memory");
+		ss << " (" << typeName << ")";
+	}
+
+	pProp = new CMFCPropertyGridProperty( common::string2wstring(ss.str()).c_str() );
+	AddProperty( pParentProp, pProp, &symbol, &STypeData(SymTagPointerType, VT_EMPTY, NULL));
+
+	return pProp;
+}
+
+
+//------------------------------------------------------------------------
+// UDT type Preview
+//------------------------------------------------------------------------
+CMFCPropertyGridProperty* visualizer::MakeProperty_UDTData(
+	CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol )
+{
+	CMFCPropertyGridProperty *pProp = NULL;
+
+	const bool isVisualizerType = visualizer::MakeVisualizerProperty( n_pProperty, pParentProp, symbol.mem, 
+		symbol.mem.name);
+	//const bool isVisualizerType = false;
+	if (isVisualizerType)
+	{
+		// 아직 하는일 없음
+	}
+	else
+	{
+		const string typeName = dia::GetSymbolTypeName(symbol.pSym);
+
+		// 최상위 UDT가 아닐때만 타입을 출력한다.
+		stringstream ss;
+		ss << symbol.mem.name;
+		if (pParentProp)
+			ss << "  (" << typeName << ")";
+
+		pProp = new CMFCPropertyGridProperty( common::string2wstring(ss.str()).c_str() ); 
+		AddProperty(pParentProp, pProp, &symbol, &STypeData(SymTagUDT, VT_EMPTY, symbol.mem.ptr));
+	}
+
+	return pProp;
+}
+
+
+//------------------------------------------------------------------------
+// pSymbol : Array Type을 가리킨다. 
+//------------------------------------------------------------------------
+void visualizer ::MakeProperty_Array(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol,
+									 const int depth)
+{
+	ULONGLONG length=0;
+	HRESULT hr = symbol.pSym->get_length(&length);
+	ASSERT_RET(S_OK == hr);
+
+	IDiaSymbol* pElementType;	// 배열 개개의 타입
+	hr = symbol.pSym->get_type(&pElementType);
+	ASSERT_RET(S_OK == hr);
+
+	ULONGLONG element_length=0;
+	hr = pElementType->get_length(&element_length);
+	ASSERT(S_OK == hr);
+
+	enum SymTagEnum elemSymTag;
+	hr = pElementType->get_symTag((DWORD*)&elemSymTag);
+	ASSERT(S_OK == hr);
 
 	char valueName[ 128];
 	basic_bufferstream<char> formatter(valueName, sizeof(valueName));
 
-	if (SymTagData == elemSymTag || SymTagBaseType == elemSymTag)
+	if (//SymTagData == elemSymTag ||
+		SymTagBaseType == elemSymTag)
 	{
-		const std::string typeName = dia::GetSymbolTypeName(pElementType);
-
-		for (ULONGLONG i=0; i < length; i += element_length)
-		{
-			void *ptr = (BYTE*)memInfo.ptr + i;
-			SMemoryInfo arrayElem(typeName.c_str(), ptr, (size_t)element_length);
-
-			formatter.seekp(0);
-			formatter << "[" << i / element_length << "]" << std::ends;
-			MakeProperty_BaseType(pParentProp, valueName, pSymbol, arrayElem);
-		}
-
-		pParentProp->Expand(FALSE); // 일단 접어놓는다.
-	}
-	else // UDT, Array
-	{
-		const std::string typeName = dia::GetSymbolTypeName(pElementType);
 		for (ULONGLONG i=0; i < length; i += element_length)
 		{
 			formatter.seekp(0);
 			formatter << "[" << i / element_length << "]" << std::ends;
-			CMFCPropertyGridProperty *pProp =
-				new CMFCPropertyGridProperty( common::string2wstring(valueName).c_str() );
-			AddProperty( pParentProp, pProp, &STypeData(SymTagUDT,VT_EMPTY,NULL));
 
-			void *ptr = (BYTE*)memInfo.ptr + i;
-			SMemoryInfo arrayElem(typeName.c_str(), ptr, (size_t)element_length);
-			MakeProperty_Root(pProp, pElementType, arrayElem);
+			void *ptr = (BYTE*)symbol.mem.ptr + i;
+			SMemoryInfo arrayElem(valueName, ptr, (size_t)element_length);
+			MakeProperty_BaseType(pParentProp, valueName, SSymbolInfo(pElementType, arrayElem, false));
 		}
-
 		pParentProp->Expand(FALSE); // 일단 접어놓는다.
 	}
+	else // UDT Array
+	{
+		for (ULONGLONG i=0; i < length; i += element_length)
+		{
+			formatter.seekp(0);
+			formatter << "[" << i / element_length << "]" << std::ends;
+
+			void *ptr = (BYTE*)symbol.mem.ptr + i;
+			SMemoryInfo arrayElem(valueName, ptr, (size_t)element_length);
+			SSymbolInfo arraySymbol(pElementType, arrayElem, false);
+
+ 			CMFCPropertyGridProperty *pProp =
+ 				new CMFCPropertyGridProperty( common::string2wstring(valueName).c_str() );
+			AddProperty( pParentProp, pProp, &arraySymbol, &STypeData(SymTagUDT,VT_EMPTY,NULL));
+
+			MakeProperty_Root(pProp, arraySymbol, depth);
+		}
+		pParentProp->Expand(FALSE); // 일단 접어놓는다.
+	}
+	pElementType->Release();
 }
 
 
@@ -498,16 +653,15 @@ void visualizer ::MakeProperty_Array(CMFCPropertyGridProperty *pParentProp,
 // pSymbol 은 데이타를 가르키는 심볼이어야 한다.
 //------------------------------------------------------------------------
 CMFCPropertyGridProperty* visualizer ::MakeProperty_BaseType(
-	CMFCPropertyGridProperty *pParentProp, 
-	const std::string valueName, IDiaSymbol *pSymbol, 
-	const SMemoryInfo &memInfo )
+	CMFCPropertyGridProperty *pParentProp, const std::string valueName, 
+	const SSymbolInfo &symbol )
 {
-	_variant_t value = dia::GetValueFromSymbol(memInfo.ptr, pSymbol);
+	_variant_t value = dia::GetValueFromSymbol(symbol.mem.ptr, symbol.pSym);
 
 	// static 변수는 프로세스끼리 공유할 수없으므로 0으로 출력한다.
 	bool IsNotPrint = false;
 	LocationType locType;
-	dia::GetSymbolLocation(pSymbol, &locType);
+	dia::GetSymbolLocation(symbol.pSym, &locType);
 	if (LocIsStatic == locType)
 	{
 		value = 0;
@@ -531,7 +685,7 @@ CMFCPropertyGridProperty* visualizer ::MakeProperty_BaseType(
 			pProp = new CMFCPropertyGridProperty( common::string2wstring(valueName).c_str(), value, _T("") );
 
 			_variant_t v1 = pProp->GetValue();
-			assert(v1.vt == value.vt);
+			ASSERT(v1.vt == value.vt);
 		}
 		break;
 
@@ -543,10 +697,6 @@ CMFCPropertyGridProperty* visualizer ::MakeProperty_BaseType(
 
 	default:
 		{
-			// 			CMainFrame *pFrm = (CMainFrame*)::AfxGetMainWnd();
-			// 			std::stringstream ss;
-			// 			ss << valueName << "값의 데이타를 Property애 추가하지 못했습니다.";
-			// 			pFrm->GetOutputWnd().AddString( common::string2wstring(ss.str()).c_str() );
 		}
 		break;
 	}
@@ -556,21 +706,19 @@ CMFCPropertyGridProperty* visualizer ::MakeProperty_BaseType(
 	{
 		delete pProp;
 		return NULL;
-	}
+ 	}
 
 	if (IsNotPrint)
 	{
 		// 화면에 출력되지 않는 값은 메모리주소를 NULL로 설정해서
 		// Refresh 되지 않게 한다.
-		pProp->AllowEdit(FALSE);
-		pProp->Enable(FALSE);
-		AddProperty(pParentProp, pProp, &STypeData(SymTagData, VT_EMPTY, NULL));
+ 		pProp->AllowEdit(FALSE);
+ 		pProp->Enable(FALSE);
+		AddProperty(pParentProp, pProp, &symbol, &STypeData(SymTagData, VT_EMPTY, NULL));
 	}
 	else
 	{
-		const LONG offset = dia::GetSymbolLocation(pSymbol);
-		void *ptr = (BYTE*)memInfo.ptr + offset;
-		AddProperty(pParentProp, pProp, &STypeData(SymTagData, value.vt, ptr));
+ 		AddProperty(pParentProp, pProp, &symbol, &STypeData(SymTagData, value.vt, symbol.mem.ptr));
 	}
 
 	return pProp;
@@ -639,7 +787,7 @@ bool visualizer ::SetPropertyValue(CMFCPropertyGridProperty *pProp, _variant_t v
 	default:
 		{
 			// Err!!, Property에 value 타입의 값을 넣을 수 없습니다. 
-			assert(0);
+			ASSERT(0);
 			return false;
 		}
 		break;
@@ -654,10 +802,11 @@ bool visualizer ::SetPropertyValue(CMFCPropertyGridProperty *pProp, _variant_t v
 void visualizer ::AddProperty(
 								 CMFCPropertyGridProperty *pParentProp, 
 								 CMFCPropertyGridProperty *prop, 
+								 const SSymbolInfo *pSymbol,
 								 STypeData *typeData)
 {
 	RET(!prop);
 	RET(!n_pProperty);
 
-	n_pProperty->AddProperty(pParentProp, prop,  typeData);
+	n_pProperty->AddProperty(pParentProp, prop,  pSymbol, typeData);
 }

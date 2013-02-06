@@ -13,7 +13,7 @@ static char THIS_FILE[] = __FILE__;
 /////////////////////////////////////////////////////////////////////////////
 // CViewTree
 
-CViewTree::CViewTree()
+CViewTree::CViewTree() : m_State(VIEW)
 {
 }
 
@@ -49,6 +49,9 @@ BOOL CViewTree::OnNotify(WPARAM wParam, LPARAM lParam, LRESULT* pResult)
 //------------------------------------------------------------------------
 void CViewTree::OnTvnSelchanging(NMHDR *pNMHDR, LRESULT *pResult)
 {
+	if (VIEW != m_State) // View 상태일 때만 처리한다.
+		return;
+
 	LPNMTREEVIEW pNMTreeView = reinterpret_cast<LPNMTREEVIEW>(pNMHDR);
 	CString str = GetItemText(
 		GetSymbolTreeItem(pNMTreeView->itemNew.hItem));
@@ -89,4 +92,32 @@ HTREEITEM CViewTree::GetSymbolTreeItem(HTREEITEM hItem)
 HTREEITEM CViewTree::GetSelectSymbolTreeItem()
 {
 	return GetSymbolTreeItem( GetSelectedItem() );	
+}
+
+
+//------------------------------------------------------------------------
+// 공유메모리에 있는 정보를 읽어서 화면에 표시한다.
+//------------------------------------------------------------------------
+void	CViewTree::UpdateMemoryTree()
+{
+	m_State = REFRESH;
+	const std::string selectItemName = common::wstring2string(
+		(LPCTSTR)GetItemText( GetSelectSymbolTreeItem() ) );
+
+	DeleteAllItems();
+	sharedmemory::MemoryList memList;
+	sharedmemory::EnumerateMemoryInfo(memList);
+	BOOST_FOREACH(sharedmemory::SMemoryInfo &info, memList)
+	{
+		const std::wstring wstr = common::string2wstring( info.name );
+		const HTREEITEM hItem = InsertItem( wstr.c_str(), 0, 0, TVI_ROOT, TVI_SORT);
+
+		InsertItem(common::formatw("size: %d", info.size).c_str(), hItem);
+		InsertItem(common::formatw("ptr: 0x%x", (DWORD)info.ptr).c_str(),hItem);
+
+		if (selectItemName == info.name)
+			SelectItem(hItem);
+	}
+
+	m_State = VIEW;
 }

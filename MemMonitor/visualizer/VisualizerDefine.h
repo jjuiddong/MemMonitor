@@ -13,8 +13,7 @@
 
 #include <string>
 
-namespace visualizer_parser 
-{
+namespace visualizer { namespace parser {
 	enum
 	{
 		MAX_STRING = 256,
@@ -215,10 +214,9 @@ namespace visualizer_parser
 	SStatements* NewStatement( StatementKind kind );
 
 	// Functions
-	void PrintToken( Tokentype token, char *szTokenString );
+	std::string PrintToken( Tokentype token, char *szTokenString );
 	void RemoveVisualizerScript(SVisualizerScript*p);
 	void RemoveType_Stmt( SType_Stmt *p);
 	void RemoveType_Stmts( SType_Stmts *p );
 
-}
-
+}}

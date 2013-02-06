@@ -8,20 +8,21 @@
 #ifndef __DEFAULTPROPERTYMAKER_H__
 #define __DEFAULTPROPERTYMAKER_H__
 
-#include "VisualizerDefine.h"
+#include "VisualizerGlobal.h"
 
-struct IDiaSymbol;
-class CPropertiesWnd;
-struct STypeData;
+class CDataProperty;
 namespace visualizer
 {
-	bool		MakeProperty_DefaultForm( CPropertiesWnd *pProperties,  const std::string &symbolName );
+	bool		MakeProperty_DefaultForm( CDataProperty *pProperties,  const std::string &symbolName );
 
-	bool		MakeProperty_DefaultForm(  CPropertiesWnd *pProperties, CMFCPropertyGridProperty *pParentProp,  
+	bool		MakeProperty_DefaultForm(  CDataProperty *pProperties, CMFCPropertyGridProperty *pParentProp,  
 		const std::string &symbolName );
 
-	bool		MakeProperty_DefaultForm(  CPropertiesWnd *pProperties, CMFCPropertyGridProperty *pParentProp,  
-		IDiaSymbol *pSymbol, const sharedmemory::SMemoryInfo &memInfo );
+	bool		MakeProperty_DefaultForm(  CDataProperty *pProperties, CMFCPropertyGridProperty *pParentProp,  
+		const SSymbolInfo &symbol );
+
+	bool		MakePropertyChild_DefaultForm(  CDataProperty *pProperties, CMFCPropertyGridProperty *pParentProp,  
+		const SSymbolInfo &symbol );
 
 	bool		SetPropertyValue(CMFCPropertyGridProperty *pProp, _variant_t value);
 

@@ -1,24 +1,27 @@
 
 #pragma once
 
-/////////////////////////////////////////////////////////////////////////////
-// CViewTree 창입니다.
-
 class CViewTree : public CTreeCtrl
 {
-// 생성입니다.
 public:
 	CViewTree();
 	virtual ~CViewTree();
 
-// 재정의입니다.
+protected:
+	enum State { 
+		VIEW,			// 화면에 보여지고 있는 상태.
+		REFRESH, // Refresh 상태
+	};
+	State m_State;	
+
+public:
+	void				UpdateMemoryTree();
+	HTREEITEM	GetSymbolTreeItem(HTREEITEM hItem);
+	HTREEITEM GetSelectSymbolTreeItem();
+	void				SelectSymbolItem( CString symbolName );
+
 protected:
 	virtual BOOL OnNotify(WPARAM wParam, LPARAM lParam, LRESULT* pResult);
-
-// 구현입니다.
-public:
-	HTREEITEM GetSymbolTreeItem(HTREEITEM hItem);
-	HTREEITEM GetSelectSymbolTreeItem();
 
 protected:
 	DECLARE_MESSAGE_MAP()
