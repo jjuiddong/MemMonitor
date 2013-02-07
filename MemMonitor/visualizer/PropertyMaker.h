@@ -24,6 +24,9 @@ namespace visualizer
 		CMFCPropertyGridProperty *pParentProp, 
 		const sharedmemory::SMemoryInfo &memInfo, const std::string &symbolName );
 
+	bool	MakeVisualizerProperty( CDataProperty *pPropertiesWnd, 
+		CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol );
+
 	// find
 	bool Find_ChildSymbol(  const std::string findSymbolName, 
 		IN const SSymbolInfo &symbol, OUT SSymbolInfo *pOut);

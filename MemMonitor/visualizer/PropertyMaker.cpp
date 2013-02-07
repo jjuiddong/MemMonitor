@@ -118,8 +118,7 @@ bool	visualizer::MakeVisualizerProperty( CDataProperty *pPropertiesWnd,
 	if (pVisScript)
 	{
 		IDiaSymbol *pSymbol = CDiaWrapper::Get()->FindType(str);
-		if (!pSymbol)
-			return false;
+		RETV(!pSymbol, false);
 
 		try
 		{
@@ -138,10 +137,29 @@ bool	visualizer::MakeVisualizerProperty( CDataProperty *pPropertiesWnd,
 	}
 	else
 	{
-//		visualizer::MakeProperty(pPropertiesWnd, symbolName);
-		// 아무일도 없음
 		return false;
 	}
+}
+
+
+//------------------------------------------------------------------------
+// 
+//------------------------------------------------------------------------
+bool	visualizer::MakeVisualizerProperty( CDataProperty *pPropertiesWnd, 
+	CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol )
+{
+	// 타입심볼을 얻는다.
+	dia::SymbolState symState;
+	IDiaSymbol *pBaseType = dia::GetBaseTypeSymbol(symbol.pSym, symState);
+	RETV(!pBaseType, false);
+
+	string typeName = dia::GetSymbolName(pBaseType);
+	const bool result = MakeVisualizerProperty(pPropertiesWnd, pParentProp, 
+		symbol.mem, typeName);
+
+	if (dia::NEW_SYMBOL == symState)
+		pBaseType->Release();
+	return result;
 }
 
 

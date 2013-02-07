@@ -19,7 +19,7 @@ namespace visualizer
 
 	bool		MakeProperty_Child(  CMFCPropertyGridProperty *pParentProp,  const SSymbolInfo &symbol, const int depth );
 
-	void		MakeProperty_UDT(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol, const int depth );
+	void		MakeProperty_UDTChild(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol, const int depth );
 
 	void		MakeProperty_BaseClass(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol, const int depth );
 
@@ -111,58 +111,9 @@ bool	 visualizer::MakePropertyChild_DefaultForm(  CDataProperty *pProperties,
 												   CMFCPropertyGridProperty *pParentProp,  const SSymbolInfo &symbol)
 {
 	n_pProperty = pProperties;
-	MakeProperty_Child(pParentProp, symbol, 2);
-	return true;
-
-/*
-	const std::string name = dia::GetSymbolName(symbol.pSym);
-
-	SSymbolInfo baseSymbol = symbol;
-	baseSymbol.isNotRelease = true;
-
-	enum SymTagEnum symTag;
- 	HRESULT hr = symbol.pSym->get_symTag((DWORD*)&symTag);
-	switch (symTag)
-	{
-	case SymTagBaseClass:
-	case SymTagData:
-		{
-			IDiaSymbol *pBaseType;
-			hr = symbol.pSym->get_type(&pBaseType);
-			baseSymbol.pSym = pBaseType;
-			baseSymbol.isNotRelease = false;
-		}
-		break;
-	}
-
-	CComPtr<IDiaEnumSymbols> pEnumChildren;
-	if (SUCCEEDED(baseSymbol.pSym->findChildren(SymTagNull, NULL, nsNone, &pEnumChildren))) 
-	{
-		IDiaSymbol *pChild;
-		ULONG celt = 0;
-		while (SUCCEEDED(pEnumChildren->Next(1, &pChild, &celt)) && (celt == 1)) 
-		{
-			enum SymTagEnum tag;
-			pChild->get_symTag( (DWORD*)&tag );
-			switch (tag)
-			{
-			case SymTagVTable:
-			case SymTagFunction:
-			case SymTagEnum:
-			case SymTagTypedef:
-				pChild->Release();
-				continue;
-				break;
-			}
-
-			LONG offset = dia::GetSymbolLocation(pChild);
-			SMemoryInfo memberMemInfo;
-			memberMemInfo.name = dia::GetSymbolName(pChild);
-			memberMemInfo.ptr = (BYTE*)baseSymbol.mem.ptr + offset;
-			MakeProperty_Root(pParentProp, SSymbolInfo(pChild, memberMemInfo), 1);
-		}
-	}
-/**/
+	const bool isVisualizerType = visualizer::MakeVisualizerProperty( pProperties, pParentProp, symbol );
+	if (!isVisualizerType)
+		MakeProperty_Child(pParentProp, symbol, 2);
 	return true;
 }
 
@@ -194,7 +145,7 @@ bool	 visualizer::MakeProperty_Child(  CMFCPropertyGridProperty *pParentProp,
 		break;
 
 	case SymTagUDT:
-		MakeProperty_UDT(pParentProp, symbol, depth);
+		MakeProperty_UDTChild(pParentProp, symbol, depth);
 		break;
 
 	case SymTagData: 
@@ -228,6 +179,7 @@ void visualizer::MakeProperty_Root(CMFCPropertyGridProperty *pParentProp, const 
 	if (S_OK != symbol.pSym->get_symTag((DWORD*)&symtag))
 		return;
 
+	CMFCPropertyGridProperty *pProp = NULL;
 	switch (symtag)
 	{
 	case SymTagData: 
@@ -243,15 +195,15 @@ void visualizer::MakeProperty_Root(CMFCPropertyGridProperty *pParentProp, const 
 		break;
 
 	case SymTagBaseClass:
-		{
-			CMFCPropertyGridProperty *pProp = MakeProperty_BaseClassData(pParentProp, symbol);
-			if (pProp)
-				MakeProperty_Child(pProp, symbol, depth-1);
-		}
+		pProp = MakeProperty_BaseClassData(pParentProp, symbol);
+		if (pProp)
+			MakeProperty_Child(pProp, symbol, depth-1);
 		break;
 
 	case SymTagUDT:
-		MakeProperty_UDT(pParentProp, symbol, depth);
+		pProp = MakeProperty_UDTData(pParentProp, symbol);
+		if (pProp)
+			MakeProperty_Child(pProp, symbol, depth);
 		break;
 
 	case SymTagTypedef:
@@ -295,16 +247,14 @@ CMFCPropertyGridProperty* visualizer::MakeProperty_BaseClassData(
 	return pProp;
 }
 
+
 //------------------------------------------------------------------------
 // User Define Type 
 //------------------------------------------------------------------------
-void visualizer ::MakeProperty_UDT(CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol,
-								   const int depth)
+void visualizer ::MakeProperty_UDTChild(CMFCPropertyGridProperty *pParentProp, 
+										const SSymbolInfo &symbol, const int depth)
 {
-	if (!pParentProp)
-		pParentProp = MakeProperty_UDTData(pParentProp, symbol);
-	if (!pParentProp)
-		return;
+	RET (!pParentProp);
 
 	if (depth > 0)
 	{
@@ -376,18 +326,14 @@ void visualizer ::MakeProperty_Data(CMFCPropertyGridProperty *pParentProp, const
 	{
 	case SymTagBaseType:
 		{
-//			std::string valueTypeName = dia::GetSymbolName(symbol.pSym) + " (" + dia::GetSymbolTypeName(symbol.pSym) + ")";
 			string valueTypeName = symbol.mem.name + " (" + dia::GetSymbolTypeName(symbol.pSym) + ")";
-//			string valueTypeName = ;
 			MakeProperty_BaseType( pParentProp, valueTypeName, symbol);
 		}
 		break;
 
 	case SymTagEnum:
 		{
-//			std::string name = dia::GetSymbolName(symbol.pSym);
 			std::string typeName = dia::GetSymbolTypeName(pBaseType);
-//			std::string valueTypeName =  name + " (" +  typeName + ")";
 			std::string valueTypeName =  symbol.mem.name + " (" +  typeName + ")";
 			pProp = new CMFCPropertyGridProperty( common::string2wstring(valueTypeName).c_str() , _T(" ") ); 
 			AddProperty(pParentProp, pProp, &symbol, &STypeData(baseSymTag, VT_UI4, symbol.mem.ptr));
@@ -406,10 +352,8 @@ void visualizer ::MakeProperty_Data(CMFCPropertyGridProperty *pParentProp, const
 			}
 			pProp->AllowEdit(FALSE);
 
-//			ULONGLONG offset = dia::GetSymbolLocation(symbol.pSym);
 			ULONGLONG length = 0;
 			HRESULT hr = pBaseType->get_length(&length);
-//			void *ptr = (BYTE*)symbol.mem.ptr + offset;
 			_variant_t value = dia::GetValueFromAddress( symbol.mem.ptr, btUInt, length );
 			SetPropertyValue( pProp, value);
 		}
@@ -419,21 +363,18 @@ void visualizer ::MakeProperty_Data(CMFCPropertyGridProperty *pParentProp, const
 		pProp = MakeProperty_UDTData(pParentProp, symbol);
 		if (pProp)
 			MakeProperty_Child(pProp, SSymbolInfo(pBaseType, symbol.mem), depth-1);
-		//MakeProperty_UDT(pProp, SSymbolInfo(pBaseType, symbol.mem), depth); // pBaseType을 인자로 한다.
 		break;
 
 	case SymTagArrayType:
 		pProp = MakeProperty_ArrayData(pParentProp, symbol);
 		if (pProp)
 			MakeProperty_Child(pProp, SSymbolInfo(pBaseType, symbol.mem), depth-1);
-		//MakeProperty_Array(pParentProp, SSymbolInfo(pBaseType, symbol.mem), depth); // pBaseType을 인자로 한다.
 		break;
 
 	case SymTagPointerType:
 		pProp = MakeProperty_PointerData(pParentProp, symbol);
 		if (pProp)
 			MakeProperty_Child(pProp, SSymbolInfo(pBaseType, symbol.mem), depth-1);
-		//MakeProperty_Pointer(pParentProp, SSymbolInfo(pBaseType, symbol.mem), depth); // pBaseType을 인자로 한다.
 		break;
 
 	default:
@@ -559,30 +500,22 @@ CMFCPropertyGridProperty* visualizer::MakeProperty_PointerData(
 CMFCPropertyGridProperty* visualizer::MakeProperty_UDTData(
 	CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol )
 {
-	CMFCPropertyGridProperty *pProp = NULL;
+	const string typeName = dia::GetSymbolTypeName(symbol.pSym);
 
-	const bool isVisualizerType = visualizer::MakeVisualizerProperty( n_pProperty, pParentProp, symbol.mem, 
-		symbol.mem.name);
-	//const bool isVisualizerType = false;
-	if (isVisualizerType)
-	{
-		// 아직 하는일 없음
-	}
-	else
-	{
-		const string typeName = dia::GetSymbolTypeName(symbol.pSym);
+	// 최상위 UDT가 아닐때만 타입을 출력한다.
+	stringstream ss;
+	ss << symbol.mem.name;
+	if (pParentProp)
+		ss << "  (" << typeName << ")";
 
-		// 최상위 UDT가 아닐때만 타입을 출력한다.
-		stringstream ss;
-		ss << symbol.mem.name;
-		if (pParentProp)
-			ss << "  (" << typeName << ")";
+	CMFCPropertyGridProperty *pProp = 
+		new CMFCPropertyGridProperty( common::string2wstring(ss.str()).c_str() ); 
+	AddProperty(pParentProp, pProp, &symbol, &STypeData(SymTagUDT, VT_EMPTY, symbol.mem.ptr));
 
-		pProp = new CMFCPropertyGridProperty( common::string2wstring(ss.str()).c_str() ); 
-		AddProperty(pParentProp, pProp, &symbol, &STypeData(SymTagUDT, VT_EMPTY, symbol.mem.ptr));
-	}
+	const bool isVisualizerType = visualizer::MakeVisualizerProperty( n_pProperty, 
+		pProp, symbol.mem,  symbol.mem.name);
 
-	return pProp;
+	return (isVisualizerType)? NULL : pProp;
 }
 
 

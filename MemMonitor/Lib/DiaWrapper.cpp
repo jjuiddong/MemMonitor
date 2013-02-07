@@ -157,8 +157,9 @@ ULONGLONG CDiaWrapper::GetSymbolLength(IDiaSymbol *pSymbol)
 // 심볼의 타입정보를 리턴한다.
 // pSymbol 은 데이타를 가르키든, 타입을 가르키든 
 // 그 심볼에 해당하는 타입이름을 리턴한다.
+// addOptionName : 포인터일 경우 *, 배열일 경우 array 가 붙는다.
 //------------------------------------------------------------------------
-std::string	dia::GetSymbolTypeName(IDiaSymbol *pSymbol)
+std::string	dia::GetSymbolTypeName(IDiaSymbol *pSymbol, bool addOptionName) // addOptionName=true
 {
 	HRESULT hr;
 	std::string typeName;
@@ -196,7 +197,7 @@ std::string	dia::GetSymbolTypeName(IDiaSymbol *pSymbol)
 			hr = pSymbol->get_type(&pBaseType);
 			RETV(S_FALSE == hr, typeName);
 
-			typeName = GetSymbolTypeName(pBaseType);
+			typeName = GetSymbolTypeName(pBaseType, addOptionName);
 		}
 		break;
 
@@ -205,9 +206,9 @@ std::string	dia::GetSymbolTypeName(IDiaSymbol *pSymbol)
 		break;
 	}
 
- 	if (SymTagArrayType == symtag)
+ 	if (addOptionName && SymTagArrayType == symtag)
  		typeName += " array";
-	else if (SymTagPointerType == symtag)
+	else if (addOptionName && SymTagPointerType == symtag)
 		typeName += " *";
 
 	return typeName;
@@ -734,4 +735,59 @@ IDiaSymbol* dia::FindChildSymbol( const std::string &symbolName,
 	if (isNewTypeSymbol)
 		pTypeSymbol->Release();
 	return pFindSymbol;
+}
+
+
+//------------------------------------------------------------------------
+// pSymbol 의 타입 심볼을 리턴한다.
+// UDT, BaseClass, Data, TypeDef 타입일 경우 타입심볼을 
+// 리턴한다.
+// 그 밖에 pointer, array 타입 등은 NULL 을 리턴한다.
+//
+// pSymbol 자신일 경우 result = PARAM_SYMBOL 
+// 새 심볼을 생성해서 리턴할 경우 result = NEW_SYMBOL
+// 찾지 못했을 경우 NULL을 리턴한다.
+//------------------------------------------------------------------------
+IDiaSymbol* dia::GetBaseTypeSymbol( IDiaSymbol *pSymbol, OUT SymbolState &result  )
+{
+	RETV(!pSymbol, NULL);
+
+	enum SymTagEnum tag;
+	HRESULT hr = pSymbol->get_symTag((DWORD*)&tag);
+	ASSERT_RETV(S_OK == hr, NULL);
+
+	IDiaSymbol *pRet = NULL;
+	switch (tag)
+	{
+	case SymTagUDT:
+	case SymTagBaseClass:
+	case SymTagBaseType:
+		pRet = pSymbol;
+		result = PARAM_SYMBOL;
+		break;
+
+	case SymTagTypedef:
+	case SymTagData:
+		{
+			IDiaSymbol *pBaseType;
+			hr = pSymbol->get_type(&pBaseType);
+			ASSERT_RETV(S_OK == hr, NULL);
+
+			SymbolState rs;
+			pRet = GetBaseTypeSymbol(pBaseType, rs);
+			if (!pRet)
+				break;
+
+			if (PARAM_SYMBOL != rs)
+				pBaseType->Release();
+
+			result = NEW_SYMBOL;
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	return pRet;
 }

@@ -1,6 +1,12 @@
 {
 	"pdbpath" : "C:\\Project\\GitHub\\MadSoccer\\Bin\\ServerApp.pdb" ,
-	"sharedmemoryname" : "MadSoccerServer"
+	"sharedmemoryname" : "MadSoccerServer",
 
+	"property" : [
+
+		{
+			"symbolname" : "CLobbyServer#1"
+		}
+	]
 
 }

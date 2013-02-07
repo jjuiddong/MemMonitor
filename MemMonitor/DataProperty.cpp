@@ -234,7 +234,6 @@ bool	CDataProperty::FindSymbolUpward( CMFCPropertyGridProperty *pProp, OUT SSymb
 	SPropItem *pItemData = (SPropItem*)pProp->GetData();
 	RETV(!pItemData, false);
 
-//	string name = common::wstring2string(pProp->GetName());
 	string name =  pItemData->typeName;
 	const int idx = name.find(' ');
 	string searchName;
@@ -246,10 +245,26 @@ bool	CDataProperty::FindSymbolUpward( CMFCPropertyGridProperty *pProp, OUT SSymb
 	CMFCPropertyGridProperty *pParentProp = pProp->GetParent();
 	if (pParentProp)
 	{
+		bool retry = false;
 		SSymbolInfo symbol;
 		if (!FindSymbolUpward( pParentProp, &symbol ))
-			return false;
-		return visualizer::Find_ChildSymbol(searchName, symbol, pOut);
+		{
+			retry = true;
+		}
+		else
+		{
+			if (!visualizer::Find_ChildSymbol(searchName, symbol, pOut))
+				retry = true;
+		}
+
+		if (retry)
+		{
+			// 찾기를 실패했다면, 현재 노드에서 찾기를 시도한다.
+			const string typeName = sharedmemory::ParseObjectName(searchName);
+			pOut->pSym = CDiaWrapper::Get()->FindType( typeName );
+			RETV(!pOut->pSym, false);
+			pOut->mem = SMemoryInfo(pItemData->typeName.c_str(), pItemData->typeData.ptr, 0);
+		}
 	}
 	else
 	{

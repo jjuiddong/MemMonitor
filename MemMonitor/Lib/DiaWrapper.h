@@ -42,9 +42,12 @@ namespace dia
 	IDiaSymbol*		FindChildSymbol( const std::string &symbolName, IDiaSymbol *pSymbol, 
 															OUT LONG *pOffset=NULL );
 
+	enum SymbolState { NEW_SYMBOL, PARAM_SYMBOL };
+	IDiaSymbol*		GetBaseTypeSymbol( IDiaSymbol *pSymbol, OUT SymbolState &result  );
+
 	std::string			GetSymbolName(IDiaSymbol *pSymbol);
 	LONG					GetSymbolLocation(IDiaSymbol *pSymbol, OUT LocationType *pLocType=NULL);
-	std::string			GetSymbolTypeName(IDiaSymbol *pSymbol);
+	std::string			GetSymbolTypeName(IDiaSymbol *pSymbol, bool addOptionName=true);
 	std::string			GetBasicTypeName(BasicType btype, ULONGLONG length);
 	_variant_t			GetValueFromAddress(void *srcPtr, const BasicType btype, const ULONGLONG length );
 	_variant_t			GetValueFromSymbol(void *srcPtr,  IDiaSymbol *pSymbol);
