@@ -109,16 +109,16 @@ bool	visualizer::MakeVisualizerProperty( CDataProperty *pPropertiesWnd,
 											   const SMemoryInfo &memInfo, const string &symbolName )
 {
 	const std::string str = sharedmemory::ParseObjectName(symbolName);
-	m_SymbolName = str;
-	m_MemInfo = memInfo;
-	m_pPropertiesCtrl = pPropertiesWnd;
-	m_pParentProperty = pParentProp;
-
 	SVisualizerScript *pVisScript = FindVisualizer(str);
 	if (pVisScript)
 	{
 		IDiaSymbol *pSymbol = CDiaWrapper::Get()->FindType(str);
 		RETV(!pSymbol, false);
+
+		m_SymbolName = str;
+		m_MemInfo = memInfo;
+		m_pPropertiesCtrl = pPropertiesWnd;
+		m_pParentProperty = pParentProp;
 
 		try
 		{

@@ -1,9 +1,30 @@
 
+CLobbyServer{
+	preview
+	(
+		#(
+			Users : [$e.m_Users],
+			Rooms : [$e.m_Rooms],
+			[actual member] : [$e, !]
+		)
+	)
+}
+
+
+common::ReferencePtr<*>{
+	preview
+	(
+		#(
+			 Ptr : [$e.m_p, !]
+		)
+	)
+}
+
 common::CThread{
 	preview
 	(
 		#(
-			test1 : [$e.m_State],
+			State : [$e.m_State],
 			[actual member] : [$e, !]
 		)
 	)
