@@ -98,7 +98,7 @@ END
 IDR_SORT TOOLBAR  16, 16
 BEGIN
     BUTTON      ID_BUTTON_REFRESH
-    BUTTON      ID_SORT_MENU
+    BUTTON      ID_BUTTON_OPEN_VISUALIZER
     BUTTON      ID_NEW_FOLDER
     BUTTON      ID_BUTTON32780
 END
@@ -514,6 +514,20 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
 #endif //_WIN32
 
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_POPUP_MEMORY MENU 
+BEGIN
+    POPUP "Memory"
+    BEGIN
+        MENUITEM "&Open Window",                ID_MEMORY_OPENWINDOW
+    END
+END
+
+
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -554,20 +568,6 @@ BEGIN
 END
 
 #endif    // APSTUDIO_INVOKED
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Menu
-//
-
-IDR_POPUP_MEMORY MENU 
-BEGIN
-    POPUP "Memory"
-    BEGIN
-        MENUITEM "&Open Window",                ID_MEMORY_OPENWINDOW
-    END
-END
 
 #endif    // 영어(미국) resources
 /////////////////////////////////////////////////////////////////////////////

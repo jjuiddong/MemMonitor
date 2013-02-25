@@ -49,7 +49,7 @@ bool CDiaWrapper::Init(const string &pdbFileName)
  		return false;
  	}
 
-	hr = m_pDiaDataSource->loadDataFromPdb( common::string2wstring(pdbFileName).c_str() );
+	hr = m_pDiaDataSource->loadDataFromPdb( common::str2wstr(pdbFileName).c_str() );
 	if (FAILED(hr)) 
 		return false;
 
@@ -87,18 +87,36 @@ bool CDiaWrapper::Init(const string &pdbFileName)
 IDiaSymbol* CDiaWrapper::FindType(const std::string &typeName)
 {
 	CComPtr<IDiaEnumSymbols> pEnumSymbols;
-	if (FAILED(m_pGlobalSymbol->findChildren(SymTagNull, common::string2wstring(typeName).c_str(), 
+	if (FAILED(m_pGlobalSymbol->findChildren(SymTagNull, common::str2wstr(typeName).c_str(), 
 		nsRegularExpression, &pEnumSymbols))) 
 		return NULL;
 
-	IDiaSymbol *pSymbol;
+	std::list<IDiaSymbol *> childSymbols;
+	IDiaSymbol *pSymbol = NULL;
 	ULONG celt = 0;
 	// 첫번째로 발견되는 정보만 찾아서 리턴한다.
 	while (SUCCEEDED(pEnumSymbols->Next(1, &pSymbol, &celt)) && (celt == 1)) 
 	{
-		return pSymbol;
+		childSymbols.push_back(pSymbol);
+
+		enum SymTagEnum symTag;
+		HRESULT hr = pSymbol->get_symTag((DWORD*)&symTag);
+		if (SymTagData == symTag || SymTagUDT == symTag)
+			break;
 	}
-	return NULL;
+
+	if (childSymbols.empty())
+		return NULL;
+
+	// SymTagEnum 값이 SymTagData 이거나 SymTagUDT 을 먼저 선택하도록 한다.
+	// 가장 나중에 추가된 것을 제외하고 나머지는 제거한다.
+	while (childSymbols.size() > 1)
+	{
+		childSymbols.front()->Release();
+		childSymbols.pop_front();
+	}
+	
+	return childSymbols.back();
 }
 
 
@@ -406,17 +424,17 @@ std::string dia::GetSymbolName(IDiaSymbol *pSymbol)
 	std::string name;
 	if (pSymbol->get_undecoratedName(&bstrUndName) == S_OK) {
 		if (wcscmp(bstrName, bstrUndName) == 0) {
-			name = common::wstring2string(bstrName);
+			name = common::wstr2str(bstrName);
 		}
 		else {
-			name = common::wstring2string(bstrName) +
-				"(" + common::wstring2string(bstrName) + ")";
+			name = common::wstr2str(bstrName) +
+				"(" + common::wstr2str(bstrName) + ")";
 		}
 
 		SysFreeString(bstrUndName);
 	}
 	else {
-		name = common::wstring2string(bstrName);
+		name = common::wstr2str(bstrName);
 	}
 
 	SysFreeString(bstrName);
@@ -622,7 +640,7 @@ IDiaSymbol* dia::FindChildSymbol( const std::string &symbolName,
 	RETV( !pParentSymbol, NULL );
 
 	const string name = GetSymbolName(pParentSymbol); //debug용
-	const wstring searchSymbolName = common::string2wstring(symbolName).c_str();
+	const wstring searchSymbolName = common::str2wstr(symbolName).c_str();
 
 	// 데이타 심볼이면, 타입 심볼로 교체한다.
 	enum SymTagEnum symTag;

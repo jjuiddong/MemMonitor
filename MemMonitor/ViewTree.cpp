@@ -101,7 +101,7 @@ HTREEITEM CViewTree::GetSelectSymbolTreeItem()
 void	CViewTree::UpdateMemoryTree()
 {
 	m_State = REFRESH;
-	const std::string selectItemName = common::wstring2string(
+	const std::string selectItemName = common::wstr2str(
 		(LPCTSTR)GetItemText( GetSelectSymbolTreeItem() ) );
 
 	DeleteAllItems();
@@ -109,7 +109,7 @@ void	CViewTree::UpdateMemoryTree()
 	sharedmemory::EnumerateMemoryInfo(memList);
 	BOOST_FOREACH(sharedmemory::SMemoryInfo &info, memList)
 	{
-		const std::wstring wstr = common::string2wstring( info.name );
+		const std::wstring wstr = common::str2wstr( info.name );
 		const HTREEITEM hItem = InsertItem( wstr.c_str(), 0, 0, TVI_ROOT, TVI_SORT);
 
 		InsertItem(common::formatw("size: %d", info.size).c_str(), hItem);

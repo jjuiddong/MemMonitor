@@ -242,7 +242,7 @@ CMFCPropertyGridProperty* visualizer::MakeProperty_BaseClassData(
 	CMFCPropertyGridProperty *pParentProp, const SSymbolInfo &symbol)
 {
 	CMFCPropertyGridProperty *pProp = new CMFCPropertyGridProperty(
-		common::string2wstring(symbol.mem.name).c_str());
+		common::str2wstr(symbol.mem.name).c_str());
 	AddProperty(pParentProp, pProp, &symbol, &STypeData(SymTagBaseClass, VT_EMPTY, NULL));
 	return pProp;
 }
@@ -335,7 +335,7 @@ void visualizer ::MakeProperty_Data(CMFCPropertyGridProperty *pParentProp, const
 		{
 			std::string typeName = dia::GetSymbolTypeName(pBaseType);
 			std::string valueTypeName =  symbol.mem.name + " (" +  typeName + ")";
-			pProp = new CMFCPropertyGridProperty( common::string2wstring(valueTypeName).c_str() , _T(" ") ); 
+			pProp = new CMFCPropertyGridProperty( common::str2wstr(valueTypeName).c_str() , _T(" ") ); 
 			AddProperty(pParentProp, pProp, &symbol, &STypeData(baseSymTag, VT_UI4, symbol.mem.ptr));
 
 			CComPtr<IDiaEnumSymbols> pEnumChildren;
@@ -346,7 +346,7 @@ void visualizer ::MakeProperty_Data(CMFCPropertyGridProperty *pParentProp, const
 				while (SUCCEEDED(pEnumChildren->Next(1, &pChild, &celt)) && (celt == 1)) 
 				{
 					std::string e_name = dia::GetSymbolName(pChild);
-					pProp->AddOption( common::string2wstring(e_name).c_str() );
+					pProp->AddOption( common::str2wstr(e_name).c_str() );
 					pChild->Release();
 				}
 			}
@@ -425,7 +425,7 @@ CMFCPropertyGridProperty* visualizer::MakeProperty_ArrayData(CMFCPropertyGridPro
 		ss << symbol.mem.name << " (" << typeName << ")";
 	}
 
-	pProp = new CMFCPropertyGridProperty( common::string2wstring(ss.str()).c_str() ); 
+	pProp = new CMFCPropertyGridProperty( common::str2wstr(ss.str()).c_str() ); 
 	AddProperty(pParentProp, pProp, &symbol,  &STypeData(SymTagArrayType, VT_EMPTY, NULL) );
 
 	return pProp;
@@ -487,7 +487,7 @@ CMFCPropertyGridProperty* visualizer::MakeProperty_PointerData(
 		ss << " (" << typeName << ")";
 	}
 
-	pProp = new CMFCPropertyGridProperty( common::string2wstring(ss.str()).c_str() );
+	pProp = new CMFCPropertyGridProperty( common::str2wstr(ss.str()).c_str() );
 	AddProperty( pParentProp, pProp, &symbol, &STypeData(SymTagPointerType, VT_EMPTY, NULL));
 
 	return pProp;
@@ -509,7 +509,7 @@ CMFCPropertyGridProperty* visualizer::MakeProperty_UDTData(
 		ss << "  (" << typeName << ")";
 
 	CMFCPropertyGridProperty *pProp = 
-		new CMFCPropertyGridProperty( common::string2wstring(ss.str()).c_str() ); 
+		new CMFCPropertyGridProperty( common::str2wstr(ss.str()).c_str() ); 
 	AddProperty(pParentProp, pProp, &symbol, &STypeData(SymTagUDT, VT_EMPTY, symbol.mem.ptr));
 
 	const bool isVisualizerType = visualizer::MakeVisualizerProperty( n_pProperty, 
@@ -570,7 +570,7 @@ void visualizer ::MakeProperty_Array(CMFCPropertyGridProperty *pParentProp, cons
 			SSymbolInfo arraySymbol(pElementType, arrayElem, false);
 
  			CMFCPropertyGridProperty *pProp =
- 				new CMFCPropertyGridProperty( common::string2wstring(valueName).c_str() );
+ 				new CMFCPropertyGridProperty( common::str2wstr(valueName).c_str() );
 			AddProperty( pParentProp, pProp, &arraySymbol, &STypeData(SymTagUDT,VT_EMPTY,NULL));
 
 			MakeProperty_Root(pProp, arraySymbol, depth);
@@ -615,7 +615,7 @@ CMFCPropertyGridProperty* visualizer ::MakeProperty_BaseType(
 	case VT_INT:
 	case VT_UINT:
 		{
-			pProp = new CMFCPropertyGridProperty( common::string2wstring(valueName).c_str(), value, _T("") );
+			pProp = new CMFCPropertyGridProperty( common::str2wstr(valueName).c_str(), value, _T("") );
 
 			_variant_t v1 = pProp->GetValue();
 			ASSERT(v1.vt == value.vt);
@@ -624,7 +624,7 @@ CMFCPropertyGridProperty* visualizer ::MakeProperty_BaseType(
 
 	case VT_I1:
 	case VT_UI1:
-		pProp = new CMFCPropertyGridProperty( common::string2wstring(valueName).c_str(), 
+		pProp = new CMFCPropertyGridProperty( common::str2wstr(valueName).c_str(), 
 			(_variant_t)(int)0, _T("") );
 		break;
 

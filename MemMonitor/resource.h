@@ -29,6 +29,7 @@
 #define ID_CLASS_PROPERTIES             142
 #define ID_NEW_FOLDER                   143
 #define ID_SORT_MENU                    144
+#define ID_BUTTON_OPEN_VISUALIZER       144
 #define ID_SORTING_GROUPBYTYPE          145
 #define ID_SORTING_SORTALPHABETIC       146
 #define ID_SORTING_SORTBYTYPE           147

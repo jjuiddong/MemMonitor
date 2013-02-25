@@ -101,7 +101,7 @@ BOOL CMemMonitorApp::InitInstance()
 	CCommandLineInfo cmdInfo;
 	ParseCommandLine(cmdInfo);
 	if (!cmdInfo.m_strFileName.IsEmpty())
-		g_configFileName = common::wstring2string((LPCTSTR)cmdInfo.m_strFileName);
+		g_configFileName = common::wstr2str((LPCTSTR)cmdInfo.m_strFileName);
 
 	if (!OpenConfigScript(g_configFileName))
 		return FALSE;
@@ -157,7 +157,7 @@ BOOL CMemMonitorApp::OpenConfigScript(const std::string &configFileName)
 		{
 			CString msg;
 			msg.Format( L"%s Pdb 파일이 없습니다.", 
-				common::string2wstring(pdbPath).c_str() );
+				common::str2wstr(pdbPath).c_str() );
 			::AfxMessageBox( msg );
 			return FALSE;
 		}
@@ -165,7 +165,7 @@ BOOL CMemMonitorApp::OpenConfigScript(const std::string &configFileName)
 		{
 			CString msg;
 			msg.Format( L"%s  이름의 공유메모리가 없습니다.", 
-				common::string2wstring(shareMemoryName).c_str() );
+				common::str2wstr(shareMemoryName).c_str() );
 			::AfxMessageBox( msg );
 			return FALSE;
 		}

@@ -155,7 +155,7 @@ void	CPropertiesWnd::UpdateComboBox()
 	{
 		CString comboSelectText;
 		m_wndObjectCombo.GetLBText(nItem , comboSelectText);
-			selectName = common::wstring2string((LPCTSTR)comboSelectText);
+			selectName = common::wstr2str((LPCTSTR)comboSelectText);
 	}
 
 	m_wndObjectCombo.ResetContent();
@@ -165,7 +165,7 @@ void	CPropertiesWnd::UpdateComboBox()
 	sharedmemory::EnumerateMemoryInfo(memList);
 	BOOST_FOREACH(sharedmemory::SMemoryInfo &info, memList)
 	{
-		std::wstring wstr = common::string2wstring( info.name );
+		std::wstring wstr = common::str2wstr( info.name );
 		const int idx = m_wndObjectCombo.AddString( wstr.c_str() );
 		if (idx != LB_ERR && selectName == info.name)
 			m_wndObjectCombo.SetCurSel(idx);
@@ -246,7 +246,7 @@ void CPropertiesWnd::UpdateProperty(const CString &symbolName)
 
 	m_wndPropList.UpdateProperty( symbolName );
 
-	std::string tmpStr = common::wstring2string((LPCWSTR)symbolName);
+	std::string tmpStr = common::wstr2str((LPCWSTR)symbolName);
 	std::string str = sharedmemory::ParseObjectName(tmpStr);
 
 	CComPtr<IDiaSymbol> pSymbol = CDiaWrapper::Get()->FindType(str);

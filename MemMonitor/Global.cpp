@@ -15,6 +15,6 @@ void global::PrintOutputWnd( const std::string &str )
 {
 	CMainFrame *pFrm = (CMainFrame*)::AfxGetMainWnd();
 	pFrm->GetOutputWnd().AddString( 
-		common::string2wstring(str).c_str() );
+		common::str2wstr(str).c_str() );
 }
 

@@ -61,6 +61,7 @@ BEGIN_MESSAGE_MAP(CMemoryView, CDockablePane)
 //	ON_UPDATE_COMMAND_UI_RANGE(ID_SORTING_GROUPBYTYPE, ID_SORTING_SORTBYACCESS, OnUpdateSort)
 	ON_COMMAND(ID_MEMORY_OPENWINDOW, &CMemoryView::OnMemoryOpenWindow)
 	ON_COMMAND(ID_BUTTON_REFRESH, &CMemoryView::OnButtonRefresh )
+	ON_COMMAND(ID_BUTTON_OPEN_VISUALIZER, &CMemoryView::OnButtonOpenVisualizer )
 	ON_WM_TIMER()
 	ON_WM_DESTROY()
 END_MESSAGE_MAP()
@@ -264,6 +265,16 @@ void CMemoryView::OnButtonRefresh()
 	
 	// visualizer reload
 	visualizer::OpenVisualizerScript( "autoexp.txt" );
+}
+
+
+//------------------------------------------------------------------------
+// clicked visualizer
+//------------------------------------------------------------------------
+void CMemoryView::OnButtonOpenVisualizer()
+{
+	// autoexp.txt 파일을 메모장에 연다.
+	::WinExec( "notepad.exe autoexp.txt", SW_SHOW);
 }
 
 

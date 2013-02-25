@@ -49,6 +49,7 @@ protected:
 	afx_msg LRESULT OnChangeActiveTab(WPARAM, LPARAM);
 	afx_msg void OnMemoryOpenWindow();
 	afx_msg void OnButtonRefresh();
+	afx_msg void OnButtonOpenVisualizer();
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	DECLARE_MESSAGE_MAP()
 

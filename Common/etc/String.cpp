@@ -10,7 +10,7 @@ using namespace common;
 //------------------------------------------------------------------------
 // 유니코드를 멀티바이트 문자로 변환
 //------------------------------------------------------------------------
-std::string common::wstring2string(const std::wstring &wstr)
+std::string common::wstr2str(const std::wstring &wstr)
 {
 // 	std::locale const& loc = std::locale();
 // 	typedef std::codecvt<wchar_t, char, std::mbstate_t> codecvt_t;
@@ -37,7 +37,7 @@ std::string common::wstring2string(const std::wstring &wstr)
 //------------------------------------------------------------------------
 // 멀티바이트 문자를 유니코드로 변환
 //------------------------------------------------------------------------
-std::wstring common::string2wstring(const std::string &str)
+std::wstring common::str2wstr(const std::string &str)
 {
 // 	std::locale const& loc = std::locale();
 // 	typedef std::codecvt<wchar_t, char, std::mbstate_t> codecvt_t;
@@ -65,7 +65,7 @@ std::wstring common::string2wstring(const std::string &str)
 //------------------------------------------------------------------------
 // _variant_t 타입을 스트링으로 변환시킨다. 데이타 출력용을 만들어졌다.
 //------------------------------------------------------------------------
-std::string common::variant2string(const _variant_t &var)
+std::string common::variant2str(const _variant_t &var)
 {
 	std::stringstream ss;
 	switch (var.vt)
@@ -79,7 +79,7 @@ std::string common::variant2string(const _variant_t &var)
 		{
 			tstring str = (LPCTSTR) (_bstr_t)var.bstrVal;
 #ifdef _UNICODE
-			ss << common::wstring2string(str);
+			ss << common::wstr2str(str);
 #else
 			ss << str;
 #endif
@@ -127,5 +127,5 @@ std::wstring common::formatw(const char* fmt, ...)
 	va_start ( args, fmt );
 	vsnprintf_s( textString, sizeof(textString), _TRUNCATE, fmt, args );
 	va_end ( args );
-	return string2wstring(textString);
+	return str2wstr(textString);
 }

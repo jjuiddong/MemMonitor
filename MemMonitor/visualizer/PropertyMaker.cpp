@@ -292,6 +292,7 @@ void visualizer::MakePropertyIteratorStmt( SVisBracketIterator_Stmt *pitor_stmt,
 			{
 				MakePropertyExpression( pitor_stmt->stmts->expr, each);
 				MakePropertyStatements( pitor_stmt->disp_stmt, each );
+				// each.mem = ~~
 				++count;
 			}
 

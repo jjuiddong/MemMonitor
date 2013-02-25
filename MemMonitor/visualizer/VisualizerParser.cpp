@@ -41,7 +41,7 @@ SVisualizerScript* parser::CParser::Parse( const std::string &fileName, BOOL bTr
 //	cout << fileName;
 	((CMainFrame*)::AfxGetMainWnd())->GetOutputWnd().AddString(L"Compile...");
 	((CMainFrame*)::AfxGetMainWnd())->GetOutputWnd().AddString( 
-		common::string2wstring(fileName).c_str() );	
+		common::str2wstr(fileName).c_str() );	
 
 	m_Token = m_pScan->GetToken();
 	if( ENDFILE == m_Token )
@@ -995,7 +995,7 @@ BOOL parser::CParser::Match( Tokentype t )
 		SyntaxError( "unexpected token -> " );
 
 		((CMainFrame*)::AfxGetMainWnd())->GetOutputWnd().AddString( 
-			common::string2wstring(
+			common::str2wstr(
 				PrintToken( m_Token, m_pScan->GetTokenStringQ(0) )).c_str() );
 
 		printf( "\n" );
@@ -1017,6 +1017,6 @@ void parser::CParser::SyntaxError( char *szMsg, ... )
 
 	((CMainFrame*)::AfxGetMainWnd())->GetOutputWnd().AddString( L">>>" );
  	((CMainFrame*)::AfxGetMainWnd())->GetOutputWnd().AddString( 
- 		common::string2wstring(ss.str()).c_str() );
+ 		common::str2wstr(ss.str()).c_str() );
 }
 

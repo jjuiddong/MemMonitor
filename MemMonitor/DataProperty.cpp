@@ -42,7 +42,7 @@ bool	CDataProperty::UpdateProperty(const CString &symbolName)
 	}
 	m_PropList.clear();
 
-	std::string tmpStr = common::wstring2string((LPCWSTR)symbolName);
+	std::string tmpStr = common::wstr2str((LPCWSTR)symbolName);
 	std::string str = sharedmemory::ParseObjectName(tmpStr);
 	const bool result = visualizer::MakeProperty_DefaultForm(this, tmpStr);
 

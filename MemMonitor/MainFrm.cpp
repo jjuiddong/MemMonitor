@@ -205,22 +205,20 @@ bool	CMainFrame::OpenScript( const std::string &openScriptFileName )
 		ptree &childs = props.get_child("property");
 		BOOST_FOREACH(ptree::value_type &vt, childs)
 		{
-			string name = vt.second.get<string>("symbolname");
-			CString symbolName = common::string2wstring(name).c_str();
-
-			int val[ 4] = {0,};
-			int cnt =0;
-			ptree::assoc_iterator it = vt.second.find("rect");
-			if (vt.second.not_found() != it)
-			{
-				ptree &rect = vt.second.get_child("rect");
-				BOOST_FOREACH(ptree::value_type &vt, rect)
-				{
-					val[ cnt++] = atoi(vt.second.data().c_str());
-				}
-			}
-		
-			CRect propertyRect(val[0], val[1], val[2], val[3]);
+			const string name = vt.second.get<string>("symbolname");
+// 			int val[ 4] = {0,};
+// 			int cnt =0;
+// 			ptree::assoc_iterator it = vt.second.find("rect");
+// 			if (vt.second.not_found() != it)
+// 			{
+// 				ptree &rect = vt.second.get_child("rect");
+// 				BOOST_FOREACH(ptree::value_type &vt, rect)
+// 				{
+// 					val[ cnt++] = atoi(vt.second.data().c_str());
+// 				}
+// 			}
+//			CRect propertyRect(val[0], val[1], val[2], val[3]);
+			CString symbolName = common::str2wstr(name).c_str();
 			AddPropertyWnd( symbolName );
 		}
 	}
