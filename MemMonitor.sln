@@ -1,12 +1,9 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MemMonitor", "MemMonitor\MemMonitor.vcproj", "{3BDB5108-E4A6-4B3D-951E-9FBCA342F72F}"
-	ProjectSection(ProjectDependencies) = postProject
-		{F3998DC9-8441-45D0-A8F0-719C0A06C955} = {F3998DC9-8441-45D0-A8F0-719C0A06C955}
-	EndProjectSection
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MemMonitor", "MemMonitor\MemMonitor.vcxproj", "{3BDB5108-E4A6-4B3D-951E-9FBCA342F72F}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Common", "Common\Common.vcproj", "{F3998DC9-8441-45D0-A8F0-719C0A06C955}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Common", "Common\Common.vcxproj", "{F3998DC9-8441-45D0-A8F0-719C0A06C955}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
