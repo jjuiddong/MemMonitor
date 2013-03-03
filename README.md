@@ -1,4 +1,4 @@
 MemMonitor
 ==========
 
-memory monitor
+memory monitor (IDE: vs2010)
